@@ -37,7 +37,7 @@ type API struct {
 
 type APIData struct {
 	Declarations []ProtoDeclarations
-	Dependencies map[string]ProtoHandle
+	Dependencies map[string]API
 }
 
 type Module struct {
@@ -64,6 +64,12 @@ func Generate(
 	modules := map[string]*Module{}
 
 	tpl := template.New("templates")
+
+	tpl.Funcs(template.FuncMap{
+		"message_href": func(ref MessageRef) string {
+			return fmt.Sprintf("#message-%s", ref.Message)
+		},
+	})
 
 	tpl, err := tpl.ParseFS(templateFS, "templates/*.html")
 	if err != nil {
@@ -147,6 +153,11 @@ func Generate(
 						module.Name, version.Tag, err)
 				}
 
+				localTpl, err := tpl.Clone()
+				if err != nil {
+					return fmt.Errorf("create local templates: %w", err)
+				}
+
 				dir := filepath.Join(outDir, module.Name, version.Tag)
 
 				err = os.MkdirAll(dir, 0o770)
@@ -159,6 +170,10 @@ func Generate(
 					if !ok {
 						return fmt.Errorf("missing config for %q", api)
 					}
+
+					localTpl.Funcs(template.FuncMap{
+						"message_href": apiMessageHRef(data),
+					})
 
 					d := API{
 						Name:    api,
@@ -209,7 +224,7 @@ func Generate(
 
 					err = renderVersionPage(
 						versionOutDir,
-						tpl, page)
+						localTpl, page)
 					if err != nil {
 						return fmt.Errorf(
 							"render version page for %s@%s: %w",
@@ -228,6 +243,33 @@ func Generate(
 	}
 
 	return nil
+}
+
+func apiMessageHRef(data APIData) func(ref MessageRef) string {
+	return func(ref MessageRef) string {
+		if ref.Package == "" {
+			return fmt.Sprintf("#message-%s", ref.Message)
+		}
+
+		for _, decl := range data.Declarations {
+			if decl.Package == ref.Package {
+				return fmt.Sprintf("#message-%s", ref.Message)
+			}
+		}
+
+		for dApi, dep := range data.Dependencies {
+			for _, decl := range dep.Data.Declarations {
+				if decl.Package != ref.Package {
+					continue
+				}
+
+				return fmt.Sprintf("/apis/%s/%s/#message-%s",
+					dApi, dep.Version, ref.Message)
+			}
+		}
+
+		return ""
+	}
 }
 
 func renderVersionPage(outDir string, tpl *template.Template, page Page) (outErr error) {
@@ -296,6 +338,7 @@ func collectAPIData(
 
 		for _, pd := range protos {
 			files[pd.File] = ProtoHandle{
+				API:     dep.API,
 				Module:  dep.Module,
 				Version: dep.Version,
 				Proto:   pd,
@@ -318,7 +361,10 @@ func collectAPIData(
 
 		for _, pd := range protos {
 			files[pd.File] = ProtoHandle{
-				Proto: pd,
+				API:     apiName,
+				Version: version.Tag,
+				Module:  module.Name,
+				Proto:   pd,
 			}
 		}
 
@@ -330,7 +376,7 @@ func collectAPIData(
 	for apiName, protos := range apis {
 		data := APIData{
 			Declarations: protos,
-			Dependencies: make(map[string]ProtoHandle),
+			Dependencies: make(map[string]API),
 		}
 
 		for _, p := range protos {
@@ -340,7 +386,16 @@ func collectAPIData(
 					return nil, fmt.Errorf("missing dependency %q", f)
 				}
 
-				data.Dependencies[h.Proto.Package] = h
+				data.Dependencies[h.Proto.Package] = API{
+					Name:    h.API,
+					Version: h.Version,
+					Module:  h.Module,
+					Data: APIData{
+						Declarations: []ProtoDeclarations{
+							h.Proto,
+						},
+					},
+				}
 			}
 		}
 

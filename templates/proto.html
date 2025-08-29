@@ -1,5 +1,5 @@
 {{ define "message_link" -}}
-<a class="uk-link" href="{{ or .Href (printf "#message-%s" .Message)}}">
+<a class="uk-link" href="{{ message_href . }}">
   {{- if .Package }}
   {{- .Package }}.
   {{- end }}

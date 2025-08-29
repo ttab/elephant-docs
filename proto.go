@@ -12,6 +12,7 @@ import (
 )
 
 type ProtoHandle struct {
+	API     string
 	Module  string
 	Version string
 	Proto   ProtoDeclarations
@@ -61,9 +62,6 @@ type FieldType struct {
 type MessageRef struct {
 	Package string `json:",omitempty"`
 	Message string
-	// Href is used if an external link should be used to navigate to the
-	// message.
-	Href string
 }
 
 func parseProtoFiles(
