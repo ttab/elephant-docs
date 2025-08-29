@@ -1,0 +1,25 @@
+{{ define "message_link" -}}
+<a class="uk-link" href="{{ or .Href (printf "#message-%s" .Message)}}">
+  {{- if .Package }}
+  {{- .Package }}.
+  {{- end }}
+  {{- .Message -}}
+</a>
+{{- end }}
+
+{{ define "field_type" }}
+{{- if .MappedBy }}
+map[{{.MappedBy}}]{{ template "scalar_or_message" . }}
+{{- else -}}
+{{- if .Repeated }}[]{{ end }}
+{{- template "scalar_or_message" . }}
+{{- end -}}
+{{ end }}
+
+{{ define "scalar_or_message" }}
+{{- if .Scalar -}}
+{{.Scalar}}
+{{- else if .Message -}}
+{{ template "message_link" .Message }}
+{{- end -}}
+{{ end }}

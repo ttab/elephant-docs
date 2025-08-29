@@ -1,0 +1,14 @@
+{{template "header" .}}
+<div class="grid gap-4 md:grid-cols-2">
+  {{ range .APIs }}
+  <div>
+    <div class="uk-card uk-card-body">
+      <h3 class="uk-card-title">{{ .Title }}</h3>
+      <p class="mt-4">
+        
+      </p>
+    </div>
+  </div>
+  {{ end }}
+</div>
+{{template "footer" .}}

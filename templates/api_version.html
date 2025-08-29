@@ -1,0 +1,93 @@
+{{template "header" .}}
+<div class="flex-1">
+  <h3 class="mb-4 text-4xl font-extrabold leading-none tracking-tight text-gray-900 md:text-5xl lg:text-6xl">{{.Contents.Title}} <span class="uk-badge font-normal text-base tracking-normal">{{.Contents.Version}}</span></h3>
+  <p class="text-muted-foreground text-sm">
+  </p>
+</div>
+
+{{- with .Contents }}
+{{- range .Data.Declarations }}
+
+{{- $package := .Package }}
+
+{{- if .Services }}
+<h4 class="text-4xl font-extrabold">Services</h4>
+
+{{- range .Services }}
+{{- $service := . }}
+<div class="uk-card uk-card-body">
+  <h3 class="uk-card-title">{{ .Name }}</h3>
+  {{ template "doc" .Doc }}
+
+  <table
+    class="uk-table uk-table-divider uk-table-responsive uk-table-responsive-stack"
+    >
+    <thead>
+      <tr>
+        <th>Method</th>
+        <th>Request</th>
+        <th>Response</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{- range .Methods }}
+      <tr>
+        <td data-label="Method" class="space-y-1">
+          <p class="font-bold">
+            {{.Name}}
+          </p>
+          <div class="uk-codespan font-normal text-sm ">
+            POST /twirp/{{$package}}.{{$service.Name}}/{{.Name}}
+          </div>
+          {{ template "doc" .Doc }}
+        </td>
+        <td data-label="Request">{{ template "message_link" .Request }}</td>
+        <td data-label="Response">{{ template "message_link" .Response }}</td>
+      </div>
+      {{- end }}
+    </tbody>
+  </table>
+</div>
+{{- end }}
+
+{{- end }}
+
+{{- if .Messages }}
+
+<h4 class="text-4xl font-extrabold">Messages</h4>
+
+{{- range .Messages }}
+<div id="message-{{.Name}}" class="uk-card uk-card-body">
+  <h3 class="uk-card-title">{{ .Name }}</h3>
+  {{ template "doc" .Doc }}
+
+  <table
+    class="uk-table uk-table-divider uk-table-responsive uk-table-responsive-stack"
+    >
+    <thead>
+      <tr>
+        <th>Field</th>
+        <th class="w-40">Type</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{- range .Fields }}
+      <tr>
+        <td data-label="Field">
+          <p>{{.Name}}</p>
+          {{ template "doc" .Doc }}
+        </td>
+        <td data-label="Type">{{ template "field_type" .Type }}</td>
+      </div>
+      {{- end }}
+    </tbody>
+  </table>
+</div>
+{{- end }}
+
+{{- end }}
+
+{{- end }}
+{{- end }}
+
+{{template "footer" .}}

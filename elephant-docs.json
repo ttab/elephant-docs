@@ -1,0 +1,40 @@
+{
+  "modules": [
+    {
+      "name": "github.com/ttab/elephant-api",
+      "apis": {
+        "repository": {
+          "title": "Repository"
+        },
+        "index": {
+          "title": "Index"
+        },
+        "user": {
+          "title": "User"
+        },
+        "spell": {
+          "title": "Spell"
+        },
+        "newsdoc": {
+          "title": "NewsDoc"
+        }
+      }
+    },
+    {
+      "name": "github.com/ttab/elephant-tt-api",
+      "include": {
+        "newsdoc": {
+          "from": "github.com/ttab/elephant-api"
+        }
+      },
+      "apis": {
+        "baboon": {
+          "title": "Baboon"
+        },
+        "eidos": {
+          "title": "Eidos"
+        }
+      }
+    }
+  ]
+}

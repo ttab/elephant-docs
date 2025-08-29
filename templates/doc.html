@@ -1,0 +1,13 @@
+{{ define "doc" }}
+{{- if . -}}
+<p class="text-muted-foreground text-sm">
+    {{- range . }}
+    {{- if ne . "" }}
+    {{.}}
+    {{- else }}
+    <br/><br/>
+    {{- end }}
+    {{- end }}
+</p>
+{{- end -}}
+{{ end }}
