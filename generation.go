@@ -16,7 +16,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-git/go-git/v6"
 	"github.com/go-git/go-git/v6/plumbing/object"
-	"github.com/ttab/elephantine"
+	"github.com/ttab/elephant-docs/internal"
 	"golang.org/x/mod/modfile"
 	"golang.org/x/sync/errgroup"
 )
@@ -231,7 +231,7 @@ func Generate(
 }
 
 func renderVersionPage(outDir string, tpl *template.Template, page Page) (outErr error) {
-	err := elephantine.MarshalFile(
+	err := internal.MarshalFile(
 		filepath.Join(outDir, "index.json"), page.Contents)
 	if err != nil {
 		return fmt.Errorf("write API data: %w", err)
@@ -244,7 +244,7 @@ func renderVersionPage(outDir string, tpl *template.Template, page Page) (outErr
 		return fmt.Errorf("create index.html: %w", err)
 	}
 
-	defer elephantine.Close("index.html", file, &outErr)
+	defer internal.Close("index.html", file, &outErr)
 
 	err = tpl.ExecuteTemplate(file, "api_version.html", page)
 	if err != nil {
