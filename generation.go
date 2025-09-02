@@ -10,6 +10,7 @@ import (
 	"io"
 	"log/slog"
 	"maps"
+	"net/url"
 	"os"
 	"path/filepath"
 	"slices"
@@ -77,36 +78,65 @@ func VersionsAtCommit(id plumbing.Hash, versions []*ModuleVersion) []*ModuleVers
 	return l
 }
 
-var defaultFuncs = template.FuncMap{
-	"message_href": func(ref MessageRef) string {
-		return fmt.Sprintf("#message-%s", ref.Message)
-	},
-	"commit_message": func(message string) template.HTML {
-		lines := strings.Split(message, "\n")
-
-		for i, l := range lines {
-			lines[i] = html.EscapeString(l)
-		}
-
-		return template.HTML(strings.Join(lines, "<br/>"))
-	},
-	"attr": func(name string) template.HTMLAttr {
-		return template.HTMLAttr(name)
-	},
-}
-
 func Generate(
-	ctx context.Context, outDir string, conf Config,
+	ctx context.Context, outDir string, basePath string, conf Config,
 	uiPrintln func(format string, a ...any),
 ) error {
 	apiConf := make(map[string]APIConfig)
 	modules := make(map[string]*Module)
 
+	rootPath := basePath
+	if rootPath == "" {
+		rootPath = "/"
+	}
+
+	if !strings.HasSuffix(rootPath, "/") {
+		rootPath += "/"
+	}
+
+	rootURL, err := url.Parse(rootPath)
+	if err != nil {
+		return fmt.Errorf("invalid base path: %w", err)
+	}
+
 	tpl := template.New("templates")
 
-	tpl.Funcs(defaultFuncs)
+	funcs := template.FuncMap{
+		"message_href": func(ref MessageRef) string {
+			return fmt.Sprintf("#message-%s", ref.Message)
+		},
+		"commit_message": func(message string) template.HTML {
+			lines := strings.Split(message, "\n")
 
-	tpl, err := tpl.ParseFS(templateFS, "templates/*.html")
+			for i, l := range lines {
+				lines[i] = html.EscapeString(l)
+			}
+
+			return template.HTML(strings.Join(lines, "<br/>"))
+		},
+		"attr": func(name string) template.HTMLAttr {
+			return template.HTMLAttr(name)
+		},
+		"base_path": func() string {
+			return basePath
+		},
+		"abs_url": func(targetUrl string) string {
+			target, err := url.Parse(targetUrl)
+			if err != nil {
+				panic("bad URL: " + targetUrl)
+			}
+
+			if target.Scheme != "" {
+				return targetUrl
+			}
+
+			return rootURL.JoinPath(targetUrl).String()
+		},
+	}
+
+	tpl.Funcs(funcs)
+
+	tpl, err = tpl.ParseFS(templateFS, "templates/*.html")
 	if err != nil {
 		return fmt.Errorf("parse templates: %w", err)
 	}
@@ -238,8 +268,8 @@ func Generate(
 		grp.Go(func() error {
 			for job := range jobs {
 				err := renderModuleVersionPages(
-					outDir, modules, job, tpl, apiConf,
-					apiMenu,
+					outDir, modules, job, tpl, funcs,
+					apiConf, apiMenu,
 				)
 				if err != nil {
 					return err
@@ -259,7 +289,7 @@ func Generate(
 
 		for _, module := range modules {
 			for api := range module.APIs {
-				err := renderAPILandingPages(modTemplate, outDir, apiMenu, module, api)
+				err := renderAPILandingPages(modTemplate, outDir, basePath, apiMenu, module, api)
 				if err != nil {
 					return fmt.Errorf("render %s landing page: %w",
 						api, err)
@@ -327,6 +357,7 @@ func renderModuleVersionPages(
 	modules map[string]*Module,
 	job collectJob,
 	tpl *template.Template,
+	funcs template.FuncMap,
 	apiConf map[string]APIConfig,
 	apiMenu []MenuItem,
 ) error {
@@ -357,7 +388,7 @@ func renderModuleVersionPages(
 			return fmt.Errorf("missing config for %q", api)
 		}
 
-		localFuncs := maps.Clone(defaultFuncs)
+		localFuncs := maps.Clone(funcs)
 
 		localFuncs["message_href"] = apiMessageHRef(data)
 
@@ -442,7 +473,8 @@ type ChangelogPage struct {
 }
 
 func renderAPILandingPages(
-	tpl *template.Template, outDir string,
+	tpl *template.Template,
+	outDir string, basePath string,
 	menu []MenuItem,
 	module *Module, api string,
 ) error {
@@ -503,8 +535,8 @@ func renderAPILandingPages(
 			api, err)
 	}
 
-	redirectURL := fmt.Sprintf("/apis/%s/%s",
-		api, module.LatestVersion.Tag)
+	redirectURL := fmt.Sprintf("%s/apis/%s/%s",
+		basePath, api, module.LatestVersion.Tag)
 
 	redirectPage := Page{
 		Title: conf.Title,

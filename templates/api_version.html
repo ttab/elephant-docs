@@ -7,9 +7,9 @@
   </h3>
   <div class="flex flex-wrap gap-2">
     {{- if and .LatestVersion (ne .LatestVersion .Version) }}
-    <a class="uk-btn uk-btn-default" href="/apis/{{.Name}}/{{.LatestVersion}}">Latest version</a>
+    <a class="uk-btn uk-btn-default" href="{{base_path}}/apis/{{.Name}}/{{.LatestVersion}}">Latest version</a>
     {{ end }}
-    <a class="uk-btn uk-btn-default" href="/apis/{{.Name}}/changelog">View all versions</a>
+    <a class="uk-btn uk-btn-default" href="{{base_path}}/apis/{{.Name}}/changelog">View all versions</a>
   </div>
 </div>
 

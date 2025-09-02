@@ -25,6 +25,10 @@ func main() {
 				Usage:    "output directory for documentation",
 				Required: true,
 			},
+			&cli.PathFlag{
+				Name:  "base-path",
+				Value: "",
+			},
 			&cli.StringFlag{
 				Name:  "serve",
 				Usage: "Serve documentation for local preview: -serve :8080",
@@ -43,6 +47,7 @@ func generateAction(c *cli.Context) error {
 	var (
 		configPath = c.Path("config")
 		outDir     = c.Path("out")
+		basePath   = c.Path("base-path")
 		serveAddr  = c.String("serve")
 	)
 
@@ -70,7 +75,7 @@ func generateAction(c *cli.Context) error {
 		return fmt.Errorf("unmarshal config: %w", err)
 	}
 
-	err = elephantdocs.Generate(c.Context, outDir, conf, TUIPrintln)
+	err = elephantdocs.Generate(c.Context, outDir, basePath, conf, TUIPrintln)
 	if err != nil {
 		return fmt.Errorf("generate documentation: %w", err)
 	}

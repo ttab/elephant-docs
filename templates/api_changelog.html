@@ -13,7 +13,7 @@
 {{- range .Versions }}
 <div class="uk-card uk-card-body {{if .IsPrerelease}}uk-card-secondary{{end}}">
   <h3 class="uk-card-title">
-    <a class="uk-link" href="/apis/{{$c.Name}}/{{.Tag}}">{{ .Tag }}</a>
+    <a class="uk-link" href="{{base_path}}/apis/{{$c.Name}}/{{.Tag}}">{{ .Tag }}</a>
     - <span class="text-muted-foreground">{{.Commit.Author.When.Format "2006-01-02"}}</span>
   </h3>
   {{- if .Log }}

@@ -10,16 +10,16 @@
       {{- end }}
       />
     {{- end }}
-    <link rel="icon" href="/assets/favicon-white.ico" type="image/x-icon">
-    <link rel="icon" href="/assets/favicon-black.ico" type="image/x-icon" media="(prefers-color-scheme: light)">
-    <link rel="icon" href="/assets/favicon-white.ico" type="image/x-icon" media="(prefers-color-scheme: dark)">
+    <link rel="icon" href="{{base_path}}/assets/favicon-white.ico" type="image/x-icon">
+    <link rel="icon" href="{{base_path}}/assets/favicon-black.ico" type="image/x-icon" media="(prefers-color-scheme: light)">
+    <link rel="icon" href="{{base_path}}/assets/favicon-white.ico" type="image/x-icon" media="(prefers-color-scheme: dark)">
     <title>{{.Title}} - Elephant documentation</title>
-    <link rel="stylesheet" href="/assets/css/franken-ui-core.2.1.0.css" />
-    <link rel="stylesheet" href="/assets/css/franken-ui-utilities.2.1.0.css" />
-    <link rel="stylesheet" href="/assets/css/theme.css" />
-    <link rel="stylesheet" href="/assets/css/tailwind.css" />
-    <script src="/assets/js/franken-ui-core.2.1.0.iife.js" type="module"></script>
-    <script src="/assets/js/franken-ui-icon.2.1.0.iife.js" type="module"></script>
+    <link rel="stylesheet" href="{{base_path}}/assets/css/franken-ui-core.2.1.0.css" />
+    <link rel="stylesheet" href="{{base_path}}/assets/css/franken-ui-utilities.2.1.0.css" />
+    <link rel="stylesheet" href="{{base_path}}/assets/css/theme.css" />
+    <link rel="stylesheet" href="{{base_path}}/assets/css/tailwind.css" />
+    <script src="{{base_path}}/assets/js/franken-ui-core.2.1.0.iife.js" type="module"></script>
+    <script src="{{base_path}}/assets/js/franken-ui-icon.2.1.0.iife.js" type="module"></script>
   </head>
 {{end}}
 
@@ -45,7 +45,7 @@
           uk-switcher="connect: #component-nav; animation: uk-anmt-slide-left-sm"
           >
           {{range .Menu}}
-          <li {{if .Active }}class="uk-active"{{end}}><a href="{{.HRef}}">{{.Title}}</a></li>
+          <li {{if .Active }}class="uk-active"{{end}}><a href="{{abs_url .HRef}}">{{.Title}}</a></li>
           {{end}}
         </ul>
       </aside>
@@ -56,7 +56,7 @@
             <ul class="uk-breadcrumb">
               {{range .Breadcrumb}}
               {{if .HRef}}
-              <li><a href="{{.HRef}}">{{.Title}}</a></li>
+              <li><a href="{{abs_url .HRef}}">{{.Title}}</a></li>
               {{else}}
               <li><span aria-current="page">{{.Title}}</span></a></li>
               {{end}}
