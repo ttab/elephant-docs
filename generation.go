@@ -1,11 +1,11 @@
 package elephantdocs
 
 import (
+	"bytes"
 	"context"
 	"embed"
 	"errors"
 	"fmt"
-	"html"
 	"html/template"
 	"io"
 	"log/slog"
@@ -20,7 +20,9 @@ import (
 	"github.com/go-git/go-git/v6/plumbing"
 	"github.com/go-git/go-git/v6/plumbing/object"
 	"github.com/ttab/elephant-docs/internal"
+	"github.com/yuin/goldmark"
 	"golang.org/x/mod/modfile"
+	"golang.org/x/net/html"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -98,7 +100,7 @@ func Generate(
 	uiPrintln func(format string, a ...any),
 ) error {
 	apiConf := make(map[string]APIConfig)
-	modules := map[string]*Module{}
+	modules := make(map[string]*Module)
 
 	tpl := template.New("templates")
 
@@ -126,16 +128,29 @@ func Generate(
 
 	var apiMenu []MenuItem
 
-	for api, conf := range apiConf {
-		apiMenu = append(apiMenu, MenuItem{
-			Title: conf.Title,
-			HRef:  fmt.Sprintf("/apis/%s/", api),
-		})
+	for _, module := range modules {
+		for api := range module.APIs {
+			conf := apiConf[api]
+
+			apiMenu = append(apiMenu, MenuItem{
+				Title: conf.Title,
+				HRef: fmt.Sprintf("/apis/%s/%s",
+					api, module.LatestVersion.Tag),
+			})
+		}
 	}
 
 	slices.SortFunc(apiMenu, func(a MenuItem, b MenuItem) int {
 		return strings.Compare(a.Title, b.Title)
 	})
+
+	// Prepend the home item.
+	apiMenu = append([]MenuItem{
+		{
+			Title: "Home",
+			HRef:  "/",
+		},
+	}, apiMenu...)
 
 	jobs := make(chan collectJob)
 	results := make(chan collectJob)
@@ -144,6 +159,7 @@ func Generate(
 
 	grp, gCtx := errgroup.WithContext(ctx)
 
+	// Copy all assets.
 	grp.Go(func() error {
 		err := os.CopyFS(filepath.Join(outDir), assetFS)
 		if err != nil {
@@ -153,6 +169,49 @@ func Generate(
 		return nil
 	})
 
+	grp.Go(func() error {
+		localTpl, err := tpl.Clone()
+		if err != nil {
+			return fmt.Errorf("clone templates: %w", err)
+		}
+
+		markdown, err := os.ReadFile("docs/README.md")
+		if err != nil {
+			return fmt.Errorf("read index README.md: %w", err)
+		}
+
+		var htmlBuf bytes.Buffer
+
+		err = goldmark.Convert(markdown, &htmlBuf)
+		if err != nil {
+			return fmt.Errorf("render markdown: %w", err)
+		}
+
+		tailwindHTML, err := tailwindify(&htmlBuf)
+		if err != nil {
+			return fmt.Errorf("add tailwind classes: %w", err)
+		}
+
+		page := Page{
+			Title: "Start",
+			Menu:  apiMenu,
+			Contents: MarkdownPage{
+				HTML: tailwindHTML,
+			},
+		}
+
+		err = renderPage(
+			outDir,
+			localTpl, "markdown_page.html", page)
+		if err != nil {
+			return fmt.Errorf(
+				"render markdown page: %w", err)
+		}
+
+		return nil
+	})
+
+	// Queue the rendering of each module version.
 	grp.Go(func() error {
 		defer close(jobs)
 
@@ -174,6 +233,24 @@ func Generate(
 		return nil
 	})
 
+	// Start workers that will render module versions.
+	for range 16 {
+		grp.Go(func() error {
+			for job := range jobs {
+				err := renderModuleVersionPages(
+					outDir, modules, job, tpl, apiConf,
+					apiMenu,
+				)
+				if err != nil {
+					return err
+				}
+			}
+
+			return nil
+		})
+	}
+
+	// Render landing pages (and changelogs) for each module.
 	grp.Go(func() error {
 		modTemplate, err := tpl.Clone()
 		if err != nil {
@@ -193,111 +270,175 @@ func Generate(
 		return nil
 	})
 
-	for range 16 {
-		grp.Go(func() error {
-			for job := range jobs {
-				module := job.Module
-				version := job.Version
-
-				apis, err := collectAPIData(modules, module, version)
-				if err != nil {
-					return fmt.Errorf("render %s@%s: %w",
-						module.Name, version.Tag, err)
-				}
-
-				localTpl, err := tpl.Clone()
-				if err != nil {
-					return fmt.Errorf("create local templates: %w", err)
-				}
-
-				dir := filepath.Join(outDir, module.Name, version.Tag)
-
-				err = os.MkdirAll(dir, 0o770)
-				if err != nil {
-					return fmt.Errorf("create version directory: %w", err)
-				}
-
-				for api, data := range apis {
-					conf, ok := apiConf[api]
-					if !ok {
-						return fmt.Errorf("missing config for %q", api)
-					}
-
-					localFuncs := maps.Clone(defaultFuncs)
-
-					localFuncs["message_href"] = apiMessageHRef(data)
-
-					localTpl.Funcs(localFuncs)
-
-					d := API{
-						Name:          api,
-						Title:         conf.Title,
-						Version:       version.Tag,
-						Module:        module.Name,
-						LatestVersion: module.LatestVersion.Tag,
-						Data:          data,
-					}
-
-					apiDir := filepath.Join("apis", api)
-
-					versionDir := filepath.Join(
-						apiDir, version.Tag,
-					)
-
-					menu := slices.Clone(apiMenu)
-
-					for i := range menu {
-						menu[i].Active = strings.Trim(menu[i].HRef, "/") == apiDir
-					}
-
-					versionOutDir := filepath.Join(outDir, versionDir)
-
-					err = os.MkdirAll(versionOutDir, 0o770)
-					if err != nil {
-						return fmt.Errorf("create version dir: %w", err)
-					}
-
-					page := Page{
-						Title:    d.Title,
-						Menu:     menu,
-						Contents: d,
-						Breadcrumb: []MenuItem{
-							{
-								Title: "Home",
-								HRef:  "/",
-							},
-							{
-								Title: conf.Title,
-								HRef:  "/" + apiDir,
-							},
-							{
-								Title: version.Tag,
-								HRef:  "/" + versionDir,
-							},
-						},
-					}
-
-					err = renderPage(
-						versionOutDir,
-						localTpl, "api_version.html", page)
-					if err != nil {
-						return fmt.Errorf(
-							"render version page for %s@%s: %w",
-							api, version.Tag, err)
-					}
-				}
-			}
-
-			return nil
-		})
-	}
-
 	err = grp.Wait()
 	if err != nil {
 		return fmt.Errorf("render documentation: %w", err)
 	}
 
 	return nil
+}
+
+func tailwindify(buf *bytes.Buffer) (template.HTML, error) {
+	doc, err := html.Parse(buf)
+	if err != nil {
+		return "", fmt.Errorf("parse HTML: %w", err)
+	}
+
+	classes := map[string]string{
+		"h1": "mb-4 text-4xl font-extrabold leading-none tracking-tight text-gray-900 md:text-5xl lg:text-6xl",
+		"h2": "text-4xl font-extrabold",
+		"h3": "text-3xl font-extrabold",
+		"h4": "text-2xl font-extrabold",
+		"h5": "text-1xl font-extrabold",
+		"a":  "uk-link",
+		"ul": "uk-list uk-list-circle",
+	}
+
+	for n := range doc.Descendants() {
+		if n.Type == html.ElementNode {
+			class, ok := classes[n.Data]
+			if !ok {
+				continue
+			}
+
+			n.Attr = append(n.Attr, html.Attribute{
+				Key: "class",
+				Val: class,
+			})
+		}
+	}
+
+	var out bytes.Buffer
+
+	err = html.Render(&out, doc)
+	if err != nil {
+		return "", fmt.Errorf("render modified HTML: %w", err)
+	}
+
+	return template.HTML(out.String()), nil
+}
+
+type MarkdownPage struct {
+	HTML template.HTML
+}
+
+func renderModuleVersionPages(
+	outDir string,
+	modules map[string]*Module,
+	job collectJob,
+	tpl *template.Template,
+	apiConf map[string]APIConfig,
+	apiMenu []MenuItem,
+) error {
+	module := job.Module
+	version := job.Version
+
+	apis, err := collectAPIData(modules, module, version)
+	if err != nil {
+		return fmt.Errorf("render %s@%s: %w",
+			module.Name, version.Tag, err)
+	}
+
+	localTpl, err := tpl.Clone()
+	if err != nil {
+		return fmt.Errorf("create local templates: %w", err)
+	}
+
+	dir := filepath.Join(outDir, module.Name, version.Tag)
+
+	err = os.MkdirAll(dir, 0o770)
+	if err != nil {
+		return fmt.Errorf("create version directory: %w", err)
+	}
+
+	for api, data := range apis {
+		conf, ok := apiConf[api]
+		if !ok {
+			return fmt.Errorf("missing config for %q", api)
+		}
+
+		localFuncs := maps.Clone(defaultFuncs)
+
+		localFuncs["message_href"] = apiMessageHRef(data)
+
+		localTpl.Funcs(localFuncs)
+
+		d := API{
+			Name:          api,
+			Title:         conf.Title,
+			Version:       version.Tag,
+			Module:        module.Name,
+			LatestVersion: module.LatestVersion.Tag,
+			Data:          data,
+		}
+
+		apiDir := filepath.Join("apis", api)
+
+		versionDir := filepath.Join(
+			apiDir, version.Tag,
+		)
+
+		menu := slices.Clone(apiMenu)
+
+		for i := range menu {
+			if strings.HasPrefix(menu[i].HRef, "/"+apiDir) {
+				menu[i].Active = true
+
+				break
+			}
+		}
+
+		versionOutDir := filepath.Join(outDir, versionDir)
+
+		err = os.MkdirAll(versionOutDir, 0o770)
+		if err != nil {
+			return fmt.Errorf("create version dir: %w", err)
+		}
+
+		page := Page{
+			Title:    d.Title,
+			Menu:     menu,
+			Contents: d,
+			Breadcrumb: []MenuItem{
+				{
+					Title: "Home",
+					HRef:  "/",
+				},
+				{
+					Title: conf.Title,
+					HRef:  "/" + apiDir,
+				},
+				{
+					Title: version.Tag,
+					HRef:  "/" + versionDir,
+				},
+			},
+		}
+
+		err = renderPage(
+			versionOutDir,
+			localTpl, "api_version.html", page)
+		if err != nil {
+			return fmt.Errorf(
+				"render version page for %s@%s: %w",
+				api, version.Tag, err)
+		}
+	}
+
+	return nil
+}
+
+type APILandingPage struct {
+	Name             string
+	Version          string
+	RedirectLocation string
+}
+
+type ChangelogPage struct {
+	Module   *Module
+	Name     string
+	Title    string
+	Versions []*ModuleVersion
 }
 
 func renderAPILandingPages(
@@ -315,7 +456,11 @@ func renderAPILandingPages(
 	menu = slices.Clone(menu)
 
 	for i := range menu {
-		menu[i].Active = strings.Trim(menu[i].HRef, "/") == apiDir
+		if strings.HasPrefix(menu[i].HRef, "/"+apiDir) {
+			menu[i].Active = true
+
+			break
+		}
 	}
 
 	apiOutDir := filepath.Join(outDir, apiDir)
@@ -400,19 +545,6 @@ func renderAPILandingPages(
 	}
 
 	return nil
-}
-
-type APILandingPage struct {
-	Name             string
-	Version          string
-	RedirectLocation string
-}
-
-type ChangelogPage struct {
-	Module   *Module
-	Name     string
-	Title    string
-	Versions []*ModuleVersion
 }
 
 func apiMessageHRef(data APIData) func(ref MessageRef) string {
