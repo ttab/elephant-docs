@@ -268,7 +268,7 @@ func Generate(
 		grp.Go(func() error {
 			for job := range jobs {
 				err := renderModuleVersionPages(
-					outDir, modules, job, tpl, funcs,
+					outDir, basePath, modules, job, tpl, funcs,
 					apiConf, apiMenu,
 				)
 				if err != nil {
@@ -354,6 +354,7 @@ type MarkdownPage struct {
 
 func renderModuleVersionPages(
 	outDir string,
+	basePath string,
 	modules map[string]*Module,
 	job collectJob,
 	tpl *template.Template,
@@ -390,7 +391,7 @@ func renderModuleVersionPages(
 
 		localFuncs := maps.Clone(funcs)
 
-		localFuncs["message_href"] = apiMessageHRef(data)
+		localFuncs["message_href"] = apiMessageHRef(data, basePath)
 
 		localTpl.Funcs(localFuncs)
 
@@ -579,7 +580,7 @@ func renderAPILandingPages(
 	return nil
 }
 
-func apiMessageHRef(data APIData) func(ref MessageRef) string {
+func apiMessageHRef(data APIData, basePath string) func(ref MessageRef) string {
 	return func(ref MessageRef) string {
 		if ref.Package == "" {
 			return fmt.Sprintf("#message-%s", ref.Message)
@@ -597,8 +598,8 @@ func apiMessageHRef(data APIData) func(ref MessageRef) string {
 					continue
 				}
 
-				return fmt.Sprintf("/apis/%s/%s/#message-%s",
-					dApi, dep.Version, ref.Message)
+				return fmt.Sprintf("%s/apis/%s/%s/#message-%s",
+					basePath, dApi, dep.Version, ref.Message)
 			}
 		}
 
