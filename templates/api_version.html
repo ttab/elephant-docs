@@ -68,6 +68,7 @@
   <h3 class="uk-card-title">{{ .Name }}</h3>
   {{ template "doc" .Doc }}
 
+  {{ if .Fields }}
   <table
     class="uk-table uk-table-divider uk-table-responsive uk-table-responsive-stack"
     >
@@ -80,15 +81,40 @@
     <tbody>
       {{- range .Fields }}
       <tr>
+        {{- if .OneOf }}
+        <td data-label="Type" colspan="2">
+          <h4 class="font-bold">One of:</h4>
+          <table
+            class="uk-table uk-table-divider uk-table-responsive uk-table-responsive-stack">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Type</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{- range $name, $type := .OneOf }}
+              <tr>
+                <td data-label="Field">{{$name}}</td>
+                <td data-label="Type">{{ template "field_type" $type }}</td>
+              </tr>
+              {{- end }}
+            </tbody>
+          </table>
+        </td>
+        {{- else }}
         <td data-label="Field">
           <p>{{.Name}}</p>
           {{ template "doc" .Doc }}
         </td>
         <td data-label="Type">{{ template "field_type" .Type }}</td>
-      </div>
+        {{- end }}
+      </tr>
       {{- end }}
     </tbody>
   </table>
+  {{ end }}
+
 </div>
 {{- end }}
 
