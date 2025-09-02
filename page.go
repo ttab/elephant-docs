@@ -1,6 +1,7 @@
 package elephantdocs
 
 type Page struct {
+	MetaTags   []map[string]string
 	Title      string
 	Language   string
 	Menu       []MenuItem

@@ -1,0 +1,48 @@
+{{template "header" .}}
+<div class="flex-1">
+  <h3 class="mb-4 text-4xl font-extrabold leading-none tracking-tight text-gray-900 md:text-5xl lg:text-6xl">{{.Contents.Title}}</h3>
+  <p class="text-muted-foreground text-sm">
+  </p>
+</div>
+
+{{- with .Contents }}
+
+{{- $c := . }}
+{{- $module := .Module }}
+
+{{- range .Versions }}
+<div class="uk-card uk-card-body {{if .IsPrerelease}}uk-card-secondary{{end}}">
+  <h3 class="uk-card-title">
+    <a class="uk-link" href="/apis/{{$c.Name}}/{{.Tag}}">{{ .Tag }}</a>
+    - <span class="text-muted-foreground">{{.Commit.Author.When.Format "2006-01-02"}}</span>
+  </h3>
+  {{- if .Log }}
+  <table
+    class="uk-table uk-table-divider uk-table-responsive uk-table-responsive-stack"
+    >
+    <thead>
+      <tr>
+        <th class="uk-table-shrink">Hash</th>
+        <th class="uk-table-w-40">Author</th>
+        <th>Message</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{- range .Log }}
+      <tr>
+        <td data-label="Hash" class="space-y-1">
+          <a class="uk-link" href="https://{{$module.Name}}/commit/{{.Hash}}">{{.Hash}}</a>
+        </td>
+        <td data-label="Author">{{ .Author.Name }}</td>
+        <td data-label="Message">{{ commit_message .Message }}</td>
+      </tr>
+      {{- end }}
+    </tbody>
+  </table>
+  {{- end }}
+</div>
+{{- end }}
+
+{{- end }}
+
+{{template "footer" .}}

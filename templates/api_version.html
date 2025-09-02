@@ -1,11 +1,18 @@
 {{template "header" .}}
+{{- with .Contents }}
 <div class="flex-1">
-  <h3 class="mb-4 text-4xl font-extrabold leading-none tracking-tight text-gray-900 md:text-5xl lg:text-6xl">{{.Contents.Title}} <span class="uk-badge font-normal text-base tracking-normal">{{.Contents.Version}}</span></h3>
-  <p class="text-muted-foreground text-sm">
-  </p>
+  <h3 class="mb-4 text-4xl font-extrabold leading-none tracking-tight text-gray-900 md:text-5xl lg:text-6xl">
+    {{.Title}}
+    <span class="uk-badge font-normal text-base tracking-normal">{{.Version}}</span>
+  </h3>
+  <div class="flex flex-wrap gap-2">
+    {{- if and .LatestVersion (ne .LatestVersion .Version) }}
+    <a class="uk-btn uk-btn-default" href="/apis/{{.Name}}/{{.LatestVersion}}">Latest version</a>
+    {{ end }}
+    <a class="uk-btn uk-btn-default" href="/apis/{{.Name}}/changelog">View all versions</a>
+  </div>
 </div>
 
-{{- with .Contents }}
 {{- range .Data.Declarations }}
 
 {{- $package := .Package }}

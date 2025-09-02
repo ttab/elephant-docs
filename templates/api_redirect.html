@@ -1,0 +1,18 @@
+{{- template "raw_header" . }}
+<body class="bg-background font-geist-sans text-foreground antialiased">
+  <div
+    class="flex min-h-svh items-center justify-center p-4 md:bg-muted md:p-10">
+    <div class="w-full max-w-md">
+      <div class="fr-widget border-border bg-background text-foreground md:border md:p-6">
+        <div class="flex flex-col space-y-1.5">
+          <h1 class="uk-h4">Redirecting to latest version</h1>
+        </div>
+        <p>
+          Redirecting to <a href="{{.Contents.RedirectLocation}}">
+            {{.Contents.Name}} {{.Contents.Version}}</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</body>
+{{- template "raw_footer" .}}

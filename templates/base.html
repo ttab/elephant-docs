@@ -3,6 +3,13 @@
 <html lang="{{ or .Language "en"}}">
   <head>
     <meta charset="utf-8">
+    {{- range .MetaTags }}
+    <meta
+      {{- range $k, $v := . }}
+      {{attr $k}}="{{$v}}"
+      {{- end }}
+      />
+    {{- end }}
     <link rel="icon" href="/assets/favicon-white.ico" type="image/x-icon">
     <link rel="icon" href="/assets/favicon-black.ico" type="image/x-icon" media="(prefers-color-scheme: light)">
     <link rel="icon" href="/assets/favicon-white.ico" type="image/x-icon" media="(prefers-color-scheme: dark)">

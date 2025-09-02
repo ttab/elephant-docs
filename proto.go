@@ -65,7 +65,7 @@ type MessageRef struct {
 }
 
 func parseProtoFiles(
-	version ModuleVersion, api string,
+	version *ModuleVersion, api string,
 ) ([]ProtoDeclarations, error) {
 	tree, err := version.Commit.Tree()
 	if err != nil {

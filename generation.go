@@ -3,7 +3,9 @@ package elephantdocs
 import (
 	"context"
 	"embed"
+	"errors"
 	"fmt"
+	"html"
 	"html/template"
 	"io"
 	"log/slog"
@@ -15,6 +17,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-git/go-git/v6"
+	"github.com/go-git/go-git/v6/plumbing"
 	"github.com/go-git/go-git/v6/plumbing/object"
 	"github.com/ttab/elephant-docs/internal"
 	"golang.org/x/mod/modfile"
@@ -28,11 +31,12 @@ var templateFS embed.FS
 var assetFS embed.FS
 
 type API struct {
-	Name    string
-	Title   string
-	Version string
-	Module  string
-	Data    APIData
+	Name          string
+	Title         string
+	Version       string
+	Module        string
+	LatestVersion string
+	Data          APIData
 }
 
 type APIData struct {
@@ -43,8 +47,9 @@ type APIData struct {
 type Module struct {
 	Name          string
 	Repo          *git.Repository `json:"-"`
-	Versions      []ModuleVersion
-	VersionLookup map[string]ModuleVersion `json:"-"`
+	Versions      []*ModuleVersion
+	LatestVersion *ModuleVersion
+	VersionLookup map[string]*ModuleVersion `json:"-"`
 	APIs          map[string]APIConfig
 	Include       map[string]IncludeConfig
 }
@@ -53,7 +58,39 @@ type ModuleVersion struct {
 	Tag                string
 	Commit             *object.Commit  `json:"-"`
 	Version            *semver.Version `json:"-"`
+	IsPrerelease       bool
 	DependencyVersions map[string]string
+	Log                []*object.Commit `json:"-"`
+}
+
+func VersionsAtCommit(id plumbing.Hash, versions []*ModuleVersion) []*ModuleVersion {
+	var l []*ModuleVersion
+
+	for _, v := range versions {
+		if v.Commit.Hash.Equal(id) {
+			l = append(l, v)
+		}
+	}
+
+	return l
+}
+
+var defaultFuncs = template.FuncMap{
+	"message_href": func(ref MessageRef) string {
+		return fmt.Sprintf("#message-%s", ref.Message)
+	},
+	"commit_message": func(message string) template.HTML {
+		lines := strings.Split(message, "\n")
+
+		for i, l := range lines {
+			lines[i] = html.EscapeString(l)
+		}
+
+		return template.HTML(strings.Join(lines, "<br/>"))
+	},
+	"attr": func(name string) template.HTMLAttr {
+		return template.HTMLAttr(name)
+	},
 }
 
 func Generate(
@@ -65,11 +102,7 @@ func Generate(
 
 	tpl := template.New("templates")
 
-	tpl.Funcs(template.FuncMap{
-		"message_href": func(ref MessageRef) string {
-			return fmt.Sprintf("#message-%s", ref.Message)
-		},
-	})
+	tpl.Funcs(defaultFuncs)
 
 	tpl, err := tpl.ParseFS(templateFS, "templates/*.html")
 	if err != nil {
@@ -141,6 +174,25 @@ func Generate(
 		return nil
 	})
 
+	grp.Go(func() error {
+		modTemplate, err := tpl.Clone()
+		if err != nil {
+			return fmt.Errorf("clone templates: %w", err)
+		}
+
+		for _, module := range modules {
+			for api := range module.APIs {
+				err := renderAPILandingPages(modTemplate, outDir, apiMenu, module, api)
+				if err != nil {
+					return fmt.Errorf("render %s landing page: %w",
+						api, err)
+				}
+			}
+		}
+
+		return nil
+	})
+
 	for range 16 {
 		grp.Go(func() error {
 			for job := range jobs {
@@ -171,16 +223,19 @@ func Generate(
 						return fmt.Errorf("missing config for %q", api)
 					}
 
-					localTpl.Funcs(template.FuncMap{
-						"message_href": apiMessageHRef(data),
-					})
+					localFuncs := maps.Clone(defaultFuncs)
+
+					localFuncs["message_href"] = apiMessageHRef(data)
+
+					localTpl.Funcs(localFuncs)
 
 					d := API{
-						Name:    api,
-						Title:   conf.Title,
-						Version: version.Tag,
-						Module:  module.Name,
-						Data:    data,
+						Name:          api,
+						Title:         conf.Title,
+						Version:       version.Tag,
+						Module:        module.Name,
+						LatestVersion: module.LatestVersion.Tag,
+						Data:          data,
 					}
 
 					apiDir := filepath.Join("apis", api)
@@ -222,9 +277,9 @@ func Generate(
 						},
 					}
 
-					err = renderVersionPage(
+					err = renderPage(
 						versionOutDir,
-						localTpl, page)
+						localTpl, "api_version.html", page)
 					if err != nil {
 						return fmt.Errorf(
 							"render version page for %s@%s: %w",
@@ -243,6 +298,121 @@ func Generate(
 	}
 
 	return nil
+}
+
+func renderAPILandingPages(
+	tpl *template.Template, outDir string,
+	menu []MenuItem,
+	module *Module, api string,
+) error {
+	conf, ok := module.APIs[api]
+	if !ok {
+		return errors.New("missing API configuration")
+	}
+
+	apiDir := filepath.Join("apis", api)
+
+	menu = slices.Clone(menu)
+
+	for i := range menu {
+		menu[i].Active = strings.Trim(menu[i].HRef, "/") == apiDir
+	}
+
+	apiOutDir := filepath.Join(outDir, apiDir)
+
+	log, err := getChangelog(module, api)
+	if err != nil {
+		return fmt.Errorf("get module changelog: %w", err)
+	}
+
+	changelogPage := Page{
+		Title: conf.Title,
+		Menu:  menu,
+		Contents: ChangelogPage{
+			Module:   module,
+			Name:     api,
+			Title:    conf.Title,
+			Versions: log,
+		},
+		Breadcrumb: []MenuItem{
+			{
+				Title: "Home",
+				HRef:  "/",
+			},
+			{
+				Title: conf.Title,
+				HRef:  "/" + apiDir,
+			},
+			{
+				Title: "Changelog",
+			},
+		},
+	}
+
+	err = renderPage(
+		filepath.Join(apiOutDir, "changelog"),
+		tpl, "api_changelog.html", changelogPage)
+	if err != nil {
+		return fmt.Errorf(
+			"render api page for %s: %w",
+			api, err)
+	}
+
+	redirectURL := fmt.Sprintf("/apis/%s/%s",
+		api, module.LatestVersion.Tag)
+
+	redirectPage := Page{
+		Title: conf.Title,
+		Menu:  menu,
+		MetaTags: []map[string]string{
+			{
+				"http-equiv": "refresh",
+				"content":    fmt.Sprintf("0; url=%s", redirectURL),
+			},
+		},
+		Contents: APILandingPage{
+			Name:             api,
+			Version:          module.LatestVersion.Tag,
+			RedirectLocation: redirectURL,
+		},
+		Breadcrumb: []MenuItem{
+			{
+				Title: "Home",
+				HRef:  "/",
+			},
+			{
+				Title: conf.Title,
+				HRef:  "/" + apiDir,
+			},
+			{
+				Title: "Changelog",
+			},
+		},
+	}
+
+	err = renderPage(
+		apiOutDir,
+		tpl, "api_redirect.html", redirectPage)
+	if err != nil {
+		return fmt.Errorf(
+			"render redirect page for %s: %w",
+			api, err)
+	}
+
+	return nil
+}
+
+type APILandingPage struct {
+	Name             string
+	Version          string
+	RedirectLocation string
+}
+
+type ChangelogPage struct {
+	Module   *Module
+	Name     string
+	Title    string
+	Versions []*ModuleVersion
 }
 
 func apiMessageHRef(data APIData) func(ref MessageRef) string {
@@ -272,11 +442,21 @@ func apiMessageHRef(data APIData) func(ref MessageRef) string {
 	}
 }
 
-func renderVersionPage(outDir string, tpl *template.Template, page Page) (outErr error) {
-	err := internal.MarshalFile(
+func renderPage(
+	outDir string,
+	tpl *template.Template,
+	templateName string,
+	page Page,
+) (outErr error) {
+	err := os.MkdirAll(outDir, 0o700)
+	if err != nil {
+		return fmt.Errorf("create %q: %w", outDir, err)
+	}
+
+	err = internal.MarshalFile(
 		filepath.Join(outDir, "index.json"), page.Contents)
 	if err != nil {
-		return fmt.Errorf("write API data: %w", err)
+		return fmt.Errorf("write page data: %w", err)
 	}
 
 	indexPath := filepath.Join(outDir, "index.html")
@@ -288,7 +468,7 @@ func renderVersionPage(outDir string, tpl *template.Template, page Page) (outErr
 
 	defer internal.Close("index.html", file, &outErr)
 
-	err = tpl.ExecuteTemplate(file, "api_version.html", page)
+	err = tpl.ExecuteTemplate(file, templateName, page)
 	if err != nil {
 		return fmt.Errorf("render page: %w", err)
 	}
@@ -298,12 +478,12 @@ func renderVersionPage(outDir string, tpl *template.Template, page Page) (outErr
 
 type collectJob struct {
 	Module  *Module
-	Version ModuleVersion
+	Version *ModuleVersion
 }
 
 func collectAPIData(
 	modules map[string]*Module,
-	module *Module, version ModuleVersion,
+	module *Module, version *ModuleVersion,
 ) (map[string]APIData, error) {
 	dependencies, err := readDepVersions(version.Commit, module.Include)
 	if err != nil {
