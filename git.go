@@ -30,6 +30,7 @@ func newModule(mod ModuleConfig) (*Module, error) {
 	}
 
 	module := Module{
+		Title:         mod.Title,
 		Name:          mod.Name,
 		Repo:          repo,
 		VersionLookup: make(map[string]*ModuleVersion),

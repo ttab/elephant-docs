@@ -13,7 +13,9 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -40,6 +42,7 @@ type API struct {
 	Module        string
 	LatestVersion string
 	Data          APIData
+	Readme        template.HTML
 }
 
 type APIData struct {
@@ -48,6 +51,7 @@ type APIData struct {
 }
 
 type Module struct {
+	Title         string
 	Name          string
 	Repo          *git.Repository `json:"-"`
 	Versions      []*ModuleVersion
@@ -159,15 +163,25 @@ func Generate(
 	var apiMenu []MenuItem
 
 	for _, module := range modules {
+		modItem := MenuItem{
+			Title: module.Title,
+		}
+
 		for api := range module.APIs {
 			conf := apiConf[api]
 
-			apiMenu = append(apiMenu, MenuItem{
+			modItem.Children = append(modItem.Children, MenuItem{
 				Title: conf.Title,
 				HRef: fmt.Sprintf("/apis/%s/%s",
 					api, module.LatestVersion.Tag),
 			})
 		}
+
+		slices.SortFunc(modItem.Children, func(a MenuItem, b MenuItem) int {
+			return strings.Compare(a.Title, b.Title)
+		})
+
+		apiMenu = append(apiMenu, modItem)
 	}
 
 	slices.SortFunc(apiMenu, func(a MenuItem, b MenuItem) int {
@@ -205,28 +219,16 @@ func Generate(
 			return fmt.Errorf("clone templates: %w", err)
 		}
 
-		markdown, err := os.ReadFile("docs/README.md")
+		html, err := renderMarkdownFile("docs/README.md", markdownOptions{})
 		if err != nil {
-			return fmt.Errorf("read index README.md: %w", err)
-		}
-
-		var htmlBuf bytes.Buffer
-
-		err = goldmark.Convert(markdown, &htmlBuf)
-		if err != nil {
-			return fmt.Errorf("render markdown: %w", err)
-		}
-
-		tailwindHTML, err := tailwindify(&htmlBuf)
-		if err != nil {
-			return fmt.Errorf("add tailwind classes: %w", err)
+			return fmt.Errorf("render start page contents: %w", err)
 		}
 
 		page := Page{
 			Title: "Start",
 			Menu:  apiMenu,
 			Contents: MarkdownPage{
-				HTML: tailwindHTML,
+				HTML: html,
 			},
 		}
 
@@ -308,24 +310,100 @@ func Generate(
 	return nil
 }
 
-func tailwindify(buf *bytes.Buffer) (template.HTML, error) {
-	doc, err := html.Parse(buf)
+type markdownOptions struct {
+	HeadingShift int
+}
+
+var hTagExp = regexp.MustCompile(`^h\d$`)
+
+type gitFiler interface {
+	File(path string) (*object.File, error)
+}
+
+func renderMarkdownGitFileIfExists(
+	gf gitFiler,
+	filePath string,
+	opts markdownOptions,
+) (_ template.HTML, outErr error) {
+	html, err := renderMarkdownGitFile(gf, filePath, opts)
+	if errors.Is(err, object.ErrFileNotFound) {
+		return "", nil
+	} else if err != nil {
+		return "", err
+	}
+
+	return html, nil
+}
+
+func renderMarkdownGitFile(
+	gf gitFiler,
+	filePath string,
+	opts markdownOptions,
+) (_ template.HTML, outErr error) {
+	file, err := gf.File(filePath)
+	if err != nil {
+		return "", fmt.Errorf("open file: %w", err)
+	}
+
+	r, err := file.Reader()
+	if err != nil {
+		return "", fmt.Errorf("open file reader: %w", err)
+	}
+
+	defer internal.Close("reader", r, &outErr)
+
+	markdown, err := io.ReadAll(r)
+	if err != nil {
+		return "", fmt.Errorf("read file: %w", err)
+	}
+
+	return renderMarkdown(markdown, opts)
+}
+
+func renderMarkdownFile(filePath string, opts markdownOptions) (template.HTML, error) {
+	markdown, err := os.ReadFile(filePath)
+	if err != nil {
+		return "", fmt.Errorf("read file: %w", err)
+	}
+
+	return renderMarkdown(markdown, opts)
+}
+
+func renderMarkdown(markdown []byte, opts markdownOptions) (template.HTML, error) {
+	var htmlBuf bytes.Buffer
+
+	err := goldmark.Convert(markdown, &htmlBuf)
+	if err != nil {
+		return "", fmt.Errorf("render markdown: %w", err)
+	}
+
+	doc, err := html.Parse(&htmlBuf)
 	if err != nil {
 		return "", fmt.Errorf("parse HTML: %w", err)
 	}
 
 	classes := map[string]string{
-		"h1": "mb-4 text-4xl font-extrabold leading-none tracking-tight text-gray-900 md:text-5xl lg:text-6xl",
-		"h2": "text-4xl font-extrabold",
-		"h3": "text-3xl font-extrabold",
-		"h4": "text-2xl font-extrabold",
-		"h5": "text-1xl font-extrabold",
-		"a":  "uk-link",
-		"ul": "uk-list uk-list-circle",
+		"h1":  "mb-4 text-4xl font-extrabold leading-none tracking-tight text-gray-900 md:text-5xl lg:text-6xl",
+		"h2":  "text-4xl font-extrabold",
+		"h3":  "text-3xl font-extrabold",
+		"h4":  "text-2xl font-extrabold",
+		"h5":  "text-1xl font-extrabold",
+		"h6":  "font-extrabold",
+		"a":   "uk-link",
+		"ul":  "uk-list uk-list-circle",
+		"pre": "uk-card uk-card-secondary",
 	}
 
 	for n := range doc.Descendants() {
 		if n.Type == html.ElementNode {
+			if opts.HeadingShift != 0 && hTagExp.MatchString(n.Data) {
+				level, _ := strconv.Atoi(strings.TrimPrefix(n.Data, "h"))
+
+				level = max(1, min(6, level+opts.HeadingShift))
+
+				n.Data = fmt.Sprintf("h%d", level)
+			}
+
 			class, ok := classes[n.Data]
 			if !ok {
 				continue
@@ -365,7 +443,27 @@ func renderModuleVersionPages(
 	module := job.Module
 	version := job.Version
 
-	apis, err := collectAPIData(modules, module, version)
+	docCommit := version.Commit
+
+	// Use the latest docs (from HEAD) for the latest version. We don't want
+	// to have to tag new releases to improve documentation. Creates a bit
+	// of a discontinuity as a version will start showing older docs as soon
+	// as its replacement is tagged.
+	if version.Tag == module.LatestVersion.Tag {
+		head, err := module.Repo.Head()
+		if err != nil {
+			return fmt.Errorf("get repo head: %w", err)
+		}
+
+		c, err := module.Repo.CommitObject(head.Hash())
+		if err != nil {
+			return fmt.Errorf("get repo head commit: %w", err)
+		}
+
+		docCommit = c
+	}
+
+	apis, err := collectAPIData(modules, module, version, docCommit)
 	if err != nil {
 		return fmt.Errorf("render %s@%s: %w",
 			module.Name, version.Tag, err)
@@ -395,6 +493,16 @@ func renderModuleVersionPages(
 
 		localTpl.Funcs(localFuncs)
 
+		readme, err := renderMarkdownGitFileIfExists(
+			docCommit,
+			fmt.Sprintf("%s/README.md", api),
+			markdownOptions{
+				HeadingShift: 3,
+			})
+		if err != nil {
+			return fmt.Errorf("get api readme: %w", err)
+		}
+
 		d := API{
 			Name:          api,
 			Title:         conf.Title,
@@ -402,6 +510,7 @@ func renderModuleVersionPages(
 			Module:        module.Name,
 			LatestVersion: module.LatestVersion.Tag,
 			Data:          data,
+			Readme:        readme,
 		}
 
 		apiDir := filepath.Join("apis", api)
@@ -409,16 +518,6 @@ func renderModuleVersionPages(
 		versionDir := filepath.Join(
 			apiDir, version.Tag,
 		)
-
-		menu := slices.Clone(apiMenu)
-
-		for i := range menu {
-			if strings.HasPrefix(menu[i].HRef, "/"+apiDir) {
-				menu[i].Active = true
-
-				break
-			}
-		}
 
 		versionOutDir := filepath.Join(outDir, versionDir)
 
@@ -429,7 +528,7 @@ func renderModuleVersionPages(
 
 		page := Page{
 			Title:    d.Title,
-			Menu:     menu,
+			Menu:     markActive(apiMenu, "/"+apiDir),
 			Contents: d,
 			Breadcrumb: []MenuItem{
 				{
@@ -460,6 +559,26 @@ func renderModuleVersionPages(
 	return nil
 }
 
+func markActive(menu []MenuItem, path string) []MenuItem {
+	if len(menu) == 0 {
+		return menu
+	}
+
+	m := slices.Clone(menu)
+
+	for i := range m {
+		if strings.HasPrefix(m[i].HRef, path) {
+			m[i].Active = true
+
+			return m
+		}
+
+		m[i].Children = markActive(m[i].Children, path)
+	}
+
+	return m
+}
+
 type APILandingPage struct {
 	Name             string
 	Version          string
@@ -486,15 +605,7 @@ func renderAPILandingPages(
 
 	apiDir := filepath.Join("apis", api)
 
-	menu = slices.Clone(menu)
-
-	for i := range menu {
-		if strings.HasPrefix(menu[i].HRef, "/"+apiDir) {
-			menu[i].Active = true
-
-			break
-		}
-	}
+	menu = markActive(menu, "/"+apiDir)
 
 	apiOutDir := filepath.Join(outDir, apiDir)
 
@@ -649,6 +760,7 @@ type collectJob struct {
 func collectAPIData(
 	modules map[string]*Module,
 	module *Module, version *ModuleVersion,
+	docCommit *object.Commit,
 ) (map[string]APIData, error) {
 	dependencies, err := readDepVersions(version.Commit, module.Include)
 	if err != nil {
@@ -725,6 +837,44 @@ func collectAPIData(
 		}
 
 		for _, p := range protos {
+			for i := range p.Services {
+				s := &p.Services[i]
+
+				for j := range s.Methods {
+					m := &s.Methods[j]
+
+					readme, err := renderMarkdownGitFileIfExists(
+						docCommit,
+						fmt.Sprintf("%s/docs/%s.%s.md",
+							apiName,
+							s.Name,
+							m.Name,
+						),
+						markdownOptions{
+							HeadingShift: 3,
+						})
+					if err != nil {
+						return nil, fmt.Errorf("get method readme: %w", err)
+					}
+
+					m.Readme = readme
+				}
+			}
+
+			for i := range p.Messages {
+				readme, err := renderMarkdownGitFileIfExists(
+					docCommit,
+					fmt.Sprintf("%s/docs/%s.md", apiName, p.Messages[i].Name),
+					markdownOptions{
+						HeadingShift: 3,
+					})
+				if err != nil {
+					return nil, fmt.Errorf("get message readme: %w", err)
+				}
+
+				p.Messages[i].Readme = readme
+			}
+
 			for _, f := range p.Imports {
 				h, ok := files[f]
 				if !ok {

@@ -39,14 +39,27 @@
     <div class="border-border my-6 border-t"></div>
     <div class="flex gap-x-12">
       <aside class="w-1/6">
-        <ul
-          class="uk-nav uk-nav-secondary"
-          hx-boost="true" hx-push-url="true"
-          uk-switcher="connect: #component-nav; animation: uk-anmt-slide-left-sm"
-          >
-          {{range .Menu}}
-          <li {{if .Active }}class="uk-active"{{end}}><a href="{{abs_url .HRef}}">{{.Title}}</a></li>
-          {{end}}
+        <ul class="uk-nav uk-nav-default space-y-1" data-uk-nav>
+          {{ range .Menu }}
+          {{ if .Children }}
+          <li class="uk-parent">
+            <a href="{{if .HRef}}{{abs_url .HRef}}{{else}}#{{end}}">
+              {{.Title}}
+              <span data-uk-nav-parent-icon></span>
+            </a>
+            <ul class="uk-nav-sub">
+              {{ range .Children }}
+              <li {{if .Active }}class="uk-active"{{end}}><a href="{{abs_url .HRef}}">{{.Title}}</a></li>
+              {{ end }}
+            </ul>
+          </li>
+
+          {{ else }}
+          <li>
+            <a href="{{if .HRef}}{{abs_url .HRef}}{{else}}#{{end}}">{{.Title}}</a>
+          </li>
+          {{ end }}
+          {{ end }}
         </ul>
       </aside>
       <div class="flex-1">

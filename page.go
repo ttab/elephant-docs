@@ -10,7 +10,18 @@ type Page struct {
 }
 
 type MenuItem struct {
-	Title  string
-	HRef   string
-	Active bool
+	Title    string
+	HRef     string
+	Active   bool
+	Children []MenuItem
+}
+
+func (m MenuItem) HasActive() bool {
+	for i := range m.Children {
+		if m.Children[i].Active || m.Children[i].HasActive() {
+			return true
+		}
+	}
+
+	return false
 }

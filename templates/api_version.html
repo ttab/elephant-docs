@@ -11,6 +11,12 @@
     {{ end }}
     <a class="uk-btn uk-btn-default" href="{{base_path}}/apis/{{.Name}}/changelog">View all versions</a>
   </div>
+
+  {{- with .Readme }}
+  <div class="flex space-y-6 mt-6">
+    {{ . }}
+  </div>
+  {{- end }}
 </div>
 
 {{- range .Data.Declarations }}
@@ -39,7 +45,7 @@
     <tbody>
       {{- range .Methods }}
       <tr>
-        <td data-label="Method" class="space-y-1">
+        <td data-label="Method" class="space-y-3">
           <p class="font-bold">
             {{.Name}}
           </p>
@@ -47,6 +53,22 @@
             POST /twirp/{{$package}}.{{$service.Name}}/{{.Name}}
           </div>
           {{ template "doc" .Doc }}
+
+          {{- if .Readme }}
+          <ul class="uk-accordion uk-card uk-card-body" data-uk-accordion>
+            <li>
+              <a class="uk-accordion-title uk-card-title p-0 pb-4" href>
+                Documentation
+                <span class="uk-accordion-icon">
+                  <uk-icon icon="chevron-down"></uk-icon>
+                </span>
+              </a>
+              <div class="uk-accordion-content space-y-6">
+                {{.Readme}}
+              </div>
+            </li>
+          </ul>
+          {{- end }}
         </td>
         <td data-label="Request">{{ template "message_link" .Request }}</td>
         <td data-label="Response">{{ template "message_link" .Response }}</td>
@@ -115,6 +137,11 @@
   </table>
   {{ end }}
 
+  {{- with .Readme }}
+  <div class="space-y-6 mt-6">
+    {{ . }}
+  </div>
+  {{- end }}
 </div>
 {{- end }}
 

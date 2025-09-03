@@ -5,6 +5,7 @@ type Config struct {
 }
 
 type ModuleConfig struct {
+	Title   string                   `json:"title"`
 	Name    string                   `json:"name"`
 	Clone   string                   `json:"clone,omitempty"`
 	APIs    map[string]APIConfig     `json:"apis"`

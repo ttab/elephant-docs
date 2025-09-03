@@ -3,6 +3,7 @@ package elephantdocs
 import (
 	"errors"
 	"fmt"
+	"html/template"
 	"strconv"
 	"strings"
 
@@ -35,12 +36,14 @@ type ProtoService struct {
 type ProtoMethod struct {
 	Name     string
 	Doc      []string
+	Readme   template.HTML
 	Request  MessageRef
 	Response MessageRef
 }
 
 type ProtoMessage struct {
 	Doc     []string
+	Readme  template.HTML
 	Name    string
 	Comment string
 	Fields  []ProtoField

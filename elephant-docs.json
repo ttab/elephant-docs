@@ -1,6 +1,7 @@
 {
   "modules": [
     {
+      "title": "Core APIs",
       "name": "github.com/ttab/elephant-api",
       "apis": {
         "repository": {
@@ -24,6 +25,7 @@
       }
     },
     {
+      "title": "TT APIs",
       "name": "github.com/ttab/elephant-tt-api",
       "include": {
         "newsdoc": {
