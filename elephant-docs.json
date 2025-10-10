@@ -38,6 +38,9 @@
         },
         "eidos": {
           "title": "Eidos"
+        },
+        "genai": {
+          "title": "GenAI"
         }
       }
     }
