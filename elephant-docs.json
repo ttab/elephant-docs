@@ -7,6 +7,9 @@
         "repository": {
           "title": "Repository"
         },
+        "repositorysocket": {
+          "title": "Repository Socket"
+        },
         "index": {
           "title": "Index"
         },
