@@ -693,13 +693,32 @@ func renderAPILandingPages(
 
 func apiMessageHRef(data APIData, basePath string) func(ref MessageRef) string {
 	return func(ref MessageRef) string {
+		// Helper function to determine if a name is a message or enum
+		getTypePrefix := func(decls []ProtoDeclarations, name string) string {
+			for _, d := range decls {
+				for _, m := range d.Messages {
+					if m.Name == name {
+						return "message"
+					}
+				}
+				for _, e := range d.Enums {
+					if e.Name == name {
+						return "enum"
+					}
+				}
+			}
+			return "message" // default to message for backwards compatibility
+		}
+
 		if ref.Package == "" {
-			return fmt.Sprintf("#message-%s", ref.Message)
+			prefix := getTypePrefix(data.Declarations, ref.Message)
+			return fmt.Sprintf("#%s-%s", prefix, ref.Message)
 		}
 
 		for _, decl := range data.Declarations {
 			if decl.Package == ref.Package {
-				return fmt.Sprintf("#message-%s", ref.Message)
+				prefix := getTypePrefix(data.Declarations, ref.Message)
+				return fmt.Sprintf("#%s-%s", prefix, ref.Message)
 			}
 		}
 
@@ -709,8 +728,9 @@ func apiMessageHRef(data APIData, basePath string) func(ref MessageRef) string {
 					continue
 				}
 
-				return fmt.Sprintf("%s/apis/%s/%s/#message-%s",
-					basePath, dApi, dep.Version, ref.Message)
+				prefix := getTypePrefix(dep.Data.Declarations, ref.Message)
+				return fmt.Sprintf("%s/apis/%s/%s/#%s-%s",
+					basePath, dApi, dep.Version, prefix, ref.Message)
 			}
 		}
 
@@ -873,6 +893,20 @@ func collectAPIData(
 				}
 
 				p.Messages[i].Readme = readme
+			}
+
+			for i := range p.Enums {
+				readme, err := renderMarkdownGitFileIfExists(
+					docCommit,
+					fmt.Sprintf("%s/docs/%s.md", apiName, p.Enums[i].Name),
+					markdownOptions{
+						HeadingShift: 3,
+					})
+				if err != nil {
+					return nil, fmt.Errorf("get enum readme: %w", err)
+				}
+
+				p.Enums[i].Readme = readme
 			}
 
 			for _, f := range p.Imports {

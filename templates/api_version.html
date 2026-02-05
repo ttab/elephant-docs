@@ -147,6 +147,49 @@
 
 {{- end }}
 
+{{- if .Enums }}
+
+<h4 class="text-4xl font-extrabold">Enums</h4>
+
+{{- range .Enums }}
+<div id="enum-{{.Name}}" class="uk-card uk-card-body">
+  <h3 class="uk-card-title">{{ .Name }}</h3>
+  {{ template "doc" .Doc }}
+
+  {{ if .Values }}
+  <table
+    class="uk-table uk-table-divider uk-table-responsive uk-table-responsive-stack"
+    >
+    <thead>
+      <tr>
+        <th>Value</th>
+        <th class="w-20">Number</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{- range .Values }}
+      <tr>
+        <td data-label="Value">
+          <p class="font-mono">{{.Name}}</p>
+          {{ template "doc" .Doc }}
+        </td>
+        <td data-label="Number" class="font-mono">{{.Number}}</td>
+      </tr>
+      {{- end }}
+    </tbody>
+  </table>
+  {{ end }}
+
+  {{- with .Readme }}
+  <div class="space-y-6 mt-6">
+    {{ . }}
+  </div>
+  {{- end }}
+</div>
+{{- end }}
+
+{{- end }}
+
 {{- end }}
 {{- end }}
 

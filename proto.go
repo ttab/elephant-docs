@@ -25,6 +25,7 @@ type ProtoDeclarations struct {
 	Imports  []string
 	Services []ProtoService
 	Messages []ProtoMessage
+	Enums    []ProtoEnum
 }
 
 type ProtoService struct {
@@ -47,6 +48,19 @@ type ProtoMessage struct {
 	Name    string
 	Comment string
 	Fields  []ProtoField
+}
+
+type ProtoEnum struct {
+	Doc    []string
+	Readme template.HTML
+	Name   string
+	Values []ProtoEnumValue
+}
+
+type ProtoEnumValue struct {
+	Name   string
+	Doc    []string
+	Number string
 }
 
 type ProtoField struct {
@@ -146,6 +160,14 @@ func createProtoDeclaration(pf *parser.Proto) ProtoDeclarations {
 			}
 
 			d.Messages = append(d.Messages, m)
+		case *parser.Enum:
+			e := ProtoEnum{
+				Doc:    collectComments(o.Comments),
+				Name:   o.EnumName,
+				Values: collectEnumValues(o),
+			}
+
+			d.Enums = append(d.Enums, e)
 		}
 	}
 
@@ -243,6 +265,23 @@ func collectFields(msg *parser.Message) []ProtoField {
 	}
 
 	return fields
+}
+
+func collectEnumValues(enum *parser.Enum) []ProtoEnumValue {
+	var values []ProtoEnumValue
+
+	for _, v := range enum.EnumBody {
+		switch o := v.(type) {
+		case *parser.EnumField:
+			values = append(values, ProtoEnumValue{
+				Name:   o.Ident,
+				Doc:    collectComments(o.Comments),
+				Number: o.Number,
+			})
+		}
+	}
+
+	return values
 }
 
 func collectMethods(srv *parser.Service) []ProtoMethod {

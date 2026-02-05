@@ -7,7 +7,9 @@ require (
 	github.com/go-git/go-git/v6 v6.0.0-20250819122726-39261590f7f3
 	github.com/urfave/cli/v2 v2.27.7
 	github.com/yoheimuta/go-protoparser/v4 v4.14.2
+	github.com/yuin/goldmark v1.7.13
 	golang.org/x/mod v0.27.0
+	golang.org/x/net v0.43.0
 	golang.org/x/sync v0.16.0
 )
 
@@ -27,9 +29,7 @@ require (
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sergi/go-diff v1.4.0 // indirect
 	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
-	github.com/yuin/goldmark v1.7.13 // indirect
 	golang.org/x/crypto v0.41.0 // indirect
 	golang.org/x/exp v0.0.0-20250531010427-b6e5de432a8b // indirect
-	golang.org/x/net v0.43.0 // indirect
 	golang.org/x/sys v0.35.0 // indirect
 )
