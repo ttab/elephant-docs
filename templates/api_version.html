@@ -1,19 +1,27 @@
 {{template "header" .}}
 {{- with .Contents }}
 <div class="flex-1">
-  <h3 class="mb-4 text-4xl font-extrabold leading-none tracking-tight text-gray-900 md:text-5xl lg:text-6xl">
-    {{.Title}}
-    <span class="uk-badge font-normal text-base tracking-normal">{{.Version}}</span>
-  </h3>
-  <div class="flex flex-wrap gap-2">
-    {{- if and .LatestVersion (ne .LatestVersion .Version) }}
-    <a class="uk-btn uk-btn-default" href="{{base_path}}/apis/{{.Name}}/{{.LatestVersion}}">Latest version</a>
-    {{ end }}
-    <a class="uk-btn uk-btn-default" href="{{base_path}}/apis/{{.Name}}/changelog">View all versions</a>
+  <div class="mb-6 md:mb-8">
+    <h3 class="page-title mb-3 text-3xl md:text-4xl lg:text-5xl font-extrabold leading-tight tracking-tight text-gray-900">
+      {{.Title}}
+      <span class="uk-badge ml-2">{{.Version}}</span>
+    </h3>
+    <div class="flex flex-wrap gap-2 mt-4">
+      {{- if and .LatestVersion (ne .LatestVersion .Version) }}
+      <a class="uk-btn uk-btn-default" href="{{base_path}}/apis/{{.Name}}/{{.LatestVersion}}">
+        <uk-icon icon="chevron-up" ratio="0.8" class="mr-1"></uk-icon>
+        Latest version
+      </a>
+      {{ end }}
+      <a class="uk-btn uk-btn-default" href="{{base_path}}/apis/{{.Name}}/changelog">
+        <uk-icon icon="history" ratio="0.8" class="mr-1"></uk-icon>
+        View all versions
+      </a>
+    </div>
   </div>
 
   {{- with .Readme }}
-  <div class="flex space-y-6 mt-6">
+  <div class="prose max-w-none space-y-6 mb-8">
     {{ . }}
   </div>
   {{- end }}
@@ -24,11 +32,11 @@
 {{- $package := .Package }}
 
 {{- if .Services }}
-<h4 class="text-4xl font-extrabold">Services</h4>
+<h4 class="section-header text-2xl md:text-3xl font-extrabold">Services</h4>
 
 {{- range .Services }}
 {{- $service := . }}
-<div id="service-{{.Name}}" class="uk-card uk-card-body">
+<div id="service-{{.Name}}" class="uk-card uk-card-body mb-6">
   <h3 class="uk-card-title anchor-heading">
     {{ .Name }}
     <a href="#service-{{.Name}}" class="anchor-link" aria-label="Link to {{.Name}}">
@@ -37,9 +45,10 @@
   </h3>
   {{ template "doc" .Doc }}
 
-  <table
-    class="uk-table uk-table-divider uk-table-responsive uk-table-responsive-stack"
-    >
+  <div class="overflow-x-auto">
+    <table
+      class="uk-table uk-table-divider uk-table-responsive uk-table-responsive-stack w-full"
+      >
     <thead>
       <tr>
         <th>Method</th>
@@ -83,7 +92,8 @@
       </div>
       {{- end }}
     </tbody>
-  </table>
+    </table>
+  </div>
 </div>
 {{- end }}
 
@@ -91,10 +101,10 @@
 
 {{- if .Messages }}
 
-<h4 class="text-4xl font-extrabold">Messages</h4>
+<h4 class="section-header text-2xl md:text-3xl font-extrabold">Messages</h4>
 
 {{- range .Messages }}
-<div id="message-{{.Name}}" class="uk-card uk-card-body">
+<div id="message-{{.Name}}" class="uk-card uk-card-body mb-6">
   <h3 class="uk-card-title anchor-heading">
     {{ .Name }}
     <a href="#message-{{.Name}}" class="anchor-link" aria-label="Link to {{.Name}}">
@@ -104,9 +114,10 @@
   {{ template "doc" .Doc }}
 
   {{ if .Fields }}
-  <table
-    class="uk-table uk-table-divider uk-table-responsive uk-table-responsive-stack"
-    >
+  <div class="overflow-x-auto">
+    <table
+      class="uk-table uk-table-divider uk-table-responsive uk-table-responsive-stack w-full"
+      >
     <thead>
       <tr>
         <th>Field</th>
@@ -147,7 +158,8 @@
       </tr>
       {{- end }}
     </tbody>
-  </table>
+    </table>
+  </div>
   {{ end }}
 
   {{- with .Readme }}
@@ -162,10 +174,10 @@
 
 {{- if .Enums }}
 
-<h4 class="text-4xl font-extrabold">Enums</h4>
+<h4 class="section-header text-2xl md:text-3xl font-extrabold">Enums</h4>
 
 {{- range .Enums }}
-<div id="enum-{{.Name}}" class="uk-card uk-card-body">
+<div id="enum-{{.Name}}" class="uk-card uk-card-body mb-6">
   <h3 class="uk-card-title anchor-heading">
     {{ .Name }}
     <a href="#enum-{{.Name}}" class="anchor-link" aria-label="Link to {{.Name}}">
@@ -175,9 +187,10 @@
   {{ template "doc" .Doc }}
 
   {{ if .Values }}
-  <table
-    class="uk-table uk-table-divider uk-table-responsive uk-table-responsive-stack"
-    >
+  <div class="overflow-x-auto">
+    <table
+      class="uk-table uk-table-divider uk-table-responsive uk-table-responsive-stack w-full"
+      >
     <thead>
       <tr>
         <th>Value</th>
@@ -195,7 +208,8 @@
       </tr>
       {{- end }}
     </tbody>
-  </table>
+    </table>
+  </div>
   {{ end }}
 
   {{- with .Readme }}
