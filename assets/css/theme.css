@@ -19,3 +19,22 @@
     --input: 0 0% 90%;
     --ring: 0 0% 63%;
 }
+
+/* Anchor link styles */
+.anchor-link {
+    display: inline-block;
+    opacity: 0;
+    margin-left: 0.5rem;
+    transition: opacity 0.2s;
+    text-decoration: none;
+    color: hsl(var(--muted-foreground));
+    vertical-align: middle;
+}
+
+.anchor-link:hover {
+    color: hsl(var(--primary));
+}
+
+.anchor-heading:hover .anchor-link {
+    opacity: 1;
+}

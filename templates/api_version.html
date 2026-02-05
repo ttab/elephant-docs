@@ -28,8 +28,13 @@
 
 {{- range .Services }}
 {{- $service := . }}
-<div class="uk-card uk-card-body">
-  <h3 class="uk-card-title">{{ .Name }}</h3>
+<div id="service-{{.Name}}" class="uk-card uk-card-body">
+  <h3 class="uk-card-title anchor-heading">
+    {{ .Name }}
+    <a href="#service-{{.Name}}" class="anchor-link" aria-label="Link to {{.Name}}">
+      <uk-icon icon="link"></uk-icon>
+    </a>
+  </h3>
   {{ template "doc" .Doc }}
 
   <table
@@ -44,10 +49,13 @@
     </thead>
     <tbody>
       {{- range .Methods }}
-      <tr>
+      <tr id="method-{{$service.Name}}.{{.Name}}">
         <td data-label="Method" class="space-y-3">
-          <p class="font-bold">
+          <p class="font-bold anchor-heading">
             {{.Name}}
+            <a href="#method-{{$service.Name}}.{{.Name}}" class="anchor-link" aria-label="Link to {{$service.Name}}.{{.Name}}">
+              <uk-icon icon="link"></uk-icon>
+            </a>
           </p>
           <div class="uk-codespan font-normal text-sm ">
             POST /twirp/{{$package}}.{{$service.Name}}/{{.Name}}
@@ -87,7 +95,12 @@
 
 {{- range .Messages }}
 <div id="message-{{.Name}}" class="uk-card uk-card-body">
-  <h3 class="uk-card-title">{{ .Name }}</h3>
+  <h3 class="uk-card-title anchor-heading">
+    {{ .Name }}
+    <a href="#message-{{.Name}}" class="anchor-link" aria-label="Link to {{.Name}}">
+      <uk-icon icon="link"></uk-icon>
+    </a>
+  </h3>
   {{ template "doc" .Doc }}
 
   {{ if .Fields }}
@@ -153,7 +166,12 @@
 
 {{- range .Enums }}
 <div id="enum-{{.Name}}" class="uk-card uk-card-body">
-  <h3 class="uk-card-title">{{ .Name }}</h3>
+  <h3 class="uk-card-title anchor-heading">
+    {{ .Name }}
+    <a href="#enum-{{.Name}}" class="anchor-link" aria-label="Link to {{.Name}}">
+      <uk-icon icon="link"></uk-icon>
+    </a>
+  </h3>
   {{ template "doc" .Doc }}
 
   {{ if .Values }}
