@@ -1,9 +1,77 @@
-// Navigation helper - shared across all pages that define a navData array.
+// Navigation helper - available on all pages.
+// Pages can optionally set window.navData before this script loads to provide
+// page-specific items. Global items are built from the sidebar menu and merged
+// in, skipping any hrefs already present in the local data.
 
 (function () {
   'use strict';
 
   var selectedIndex = -1;
+
+  // Derive base path from this script's src attribute.
+  var scriptEl = document.currentScript || document.querySelector('script[src*="nav-helper.js"]');
+  var basePath = scriptEl ? scriptEl.src.replace(/\/assets\/js\/nav-helper\.js.*$/, '') : '';
+  try { basePath = new URL(basePath).pathname.replace(/\/$/, ''); } catch (e) { basePath = ''; }
+
+  // Build global nav items from the sidebar menu.
+  function buildGlobalNavData() {
+    var items = [];
+    var sidebar = document.querySelector('.nav-tree');
+    if (!sidebar) return items;
+
+    sidebar.querySelectorAll('.nav-item').forEach(function (el) {
+      var href = el.getAttribute('href');
+      if (!href || href === '#') return;
+
+      // Get the label text without the chevron.
+      var label = el.textContent.trim();
+
+      // Determine category from parent structure.
+      var category = '';
+      var parentLi = el.closest('.nav-parent');
+      if (parentLi) {
+        // Check if this element is the parent's own header (not a leaf).
+        var directItem = parentLi.querySelector(':scope > .nav-item');
+        if (directItem === el) return; // Skip parent headers, only include leaves.
+
+        // Walk up to find the category from the closest parent header.
+        var parentHeader = parentLi.querySelector(':scope > .nav-item');
+        if (parentHeader) {
+          category = parentHeader.textContent.trim();
+        }
+
+        // Check for grandparent category.
+        var grandparent = parentLi.parentElement && parentLi.parentElement.closest('.nav-parent');
+        if (grandparent) {
+          var gpHeader = grandparent.querySelector(':scope > .nav-item');
+          if (gpHeader) {
+            category = gpHeader.textContent.trim() + ' / ' + category;
+          }
+        }
+      }
+
+      items.push({ label: label, category: category, href: href });
+    });
+
+    return items;
+  }
+
+  // Merge local and global nav data, deduplicating by href.
+  var localData = window.navData || [];
+  var globalData = buildGlobalNavData();
+  var seenHrefs = {};
+
+  localData.forEach(function (item) { seenHrefs[item.href] = true; });
+
+  var merged = localData.concat(
+    globalData.filter(function (item) {
+      if (seenHrefs[item.href]) return false;
+      seenHrefs[item.href] = true;
+      return true;
+    })
+  );
+
+  window.navData = merged;
 
   function scrollToTop() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -15,6 +83,8 @@
 
     document.body.style.overflow = 'hidden';
     modal.style.display = 'flex';
+
+    input.value = '';
 
     setTimeout(function () {
       input.focus();
@@ -48,6 +118,10 @@
     }
 
     results.innerHTML = filtered.map(function (item, index) {
+      var isExternal = item.href.charAt(0) !== '#';
+      var icon = isExternal
+        ? ' <img src="' + basePath + '/assets/icons/external.svg" width="14" height="14" alt="" class="nav-helper-external">'
+        : '';
       return '<a href="' + item.href + '"' +
         ' class="nav-helper-item' + (index === 0 ? ' selected' : '') + '"' +
         ' data-index="' + index + '"' +
@@ -55,7 +129,7 @@
         ' aria-selected="' + (index === 0) + '"' +
         ' onclick="closeNavigator()">' +
         '<span class="nav-helper-category">' + item.category + '</span>' +
-        '<span class="nav-helper-name">' + item.label + '</span>' +
+        '<span class="nav-helper-name">' + item.label + icon + '</span>' +
         '</a>';
     }).join('');
 

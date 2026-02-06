@@ -1103,6 +1103,12 @@ tbody tr:last-child td {
   font-family: 'SF Mono', Monaco, monospace;
 }
 
+.nav-helper-external {
+  opacity: 0.4;
+  margin-left: 0.375rem;
+  vertical-align: -0.1em;
+}
+
 .nav-helper-empty {
   padding: var(--spacing-2xl);
   text-align: center;
