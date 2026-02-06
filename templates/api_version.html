@@ -1,225 +1,248 @@
 {{template "header" .}}
 {{- with .Contents }}
-<div class="flex-1">
-  <div class="mb-6 md:mb-8">
-    <h3 class="page-title mb-3 text-3xl md:text-4xl lg:text-5xl font-extrabold leading-tight tracking-tight text-gray-900">
-      {{.Title}}
-      <span class="uk-badge ml-2">{{.Version}}</span>
-    </h3>
-    <div class="flex flex-wrap gap-2 mt-4">
-      {{- if and .LatestVersion (ne .LatestVersion .Version) }}
-      <a class="uk-btn uk-btn-default" href="{{base_path}}/apis/{{.Name}}/{{.LatestVersion}}">
-        <uk-icon icon="chevron-up" ratio="0.8" class="mr-1"></uk-icon>
-        Latest version
-      </a>
-      {{ end }}
-      <a class="uk-btn uk-btn-default" href="{{base_path}}/apis/{{.Name}}/changelog">
-        <uk-icon icon="history" ratio="0.8" class="mr-1"></uk-icon>
-        View all versions
-      </a>
-    </div>
+
+<!-- Page Header -->
+<div class="page-header">
+  <div class="page-title">
+    <h1>{{.Title}}</h1>
+    <span class="version-badge">{{.Version}}</span>
+  </div>
+
+  <div class="page-actions">
+    {{- if and .LatestVersion (ne .LatestVersion .Version) }}
+    <a class="btn btn-secondary" href="{{base_path}}/apis/{{.Name}}/{{.LatestVersion}}">
+      <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <polyline points="18 15 12 9 6 15"></polyline>
+      </svg>
+      Latest version
+    </a>
+    {{ end }}
+    <a class="btn btn-secondary" href="{{base_path}}/apis/{{.Name}}/changelog">
+      <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10"></circle>
+        <polyline points="12 6 12 12 16 14"></polyline>
+      </svg>
+      View all versions
+    </a>
   </div>
 
   {{- with .Readme }}
-  <div class="prose max-w-none space-y-6 mb-8">
+  <div class="prose" style="margin-top: 2rem;">
     {{ . }}
   </div>
   {{- end }}
 </div>
 
 {{- range .Data.Declarations }}
-
 {{- $package := .Package }}
 
+<!-- Services Section -->
 {{- if .Services }}
-<h4 class="section-header text-2xl md:text-3xl font-extrabold">Services</h4>
+<h2 class="section-header">Services</h2>
 
 {{- range .Services }}
 {{- $service := . }}
-<div id="service-{{.Name}}" class="uk-card uk-card-body mb-6">
-  <h3 class="uk-card-title anchor-heading">
-    {{ .Name }}
-    <a href="#service-{{.Name}}" class="anchor-link" aria-label="Link to {{.Name}}">
-      <uk-icon icon="link"></uk-icon>
-    </a>
-  </h3>
+<div id="service-{{.Name}}" class="card">
+  <div class="card-header">
+    <h3 class="card-title">
+      {{ .Name }}
+      <a href="#service-{{.Name}}" class="anchor-link" aria-label="Link to {{.Name}}">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+        </svg>
+      </a>
+    </h3>
+  </div>
+
   {{ template "doc" .Doc }}
 
-  <div class="overflow-x-auto">
-    <table
-      class="uk-table uk-table-divider uk-table-responsive uk-table-responsive-stack w-full"
-      >
-    <thead>
-      <tr>
-        <th>Method</th>
-        <th>Request</th>
-        <th>Response</th>
-      </tr>
-    </thead>
-    <tbody>
-      {{- range .Methods }}
-      <tr id="method-{{$service.Name}}.{{.Name}}">
-        <td data-label="Method" class="space-y-3">
-          <p class="font-bold anchor-heading">
-            {{.Name}}
-            <a href="#method-{{$service.Name}}.{{.Name}}" class="anchor-link" aria-label="Link to {{$service.Name}}.{{.Name}}">
-              <uk-icon icon="link"></uk-icon>
-            </a>
-          </p>
-          <div class="uk-codespan font-normal text-sm ">
-            POST /twirp/{{$package}}.{{$service.Name}}/{{.Name}}
-          </div>
-          {{ template "doc" .Doc }}
-
-          {{- if .Readme }}
-          <ul class="uk-accordion uk-card uk-card-body" data-uk-accordion>
-            <li>
-              <a class="uk-accordion-title uk-card-title p-0 pb-4" href>
-                Documentation
-                <span class="uk-accordion-icon">
-                  <uk-icon icon="chevron-down"></uk-icon>
-                </span>
-              </a>
-              <div class="uk-accordion-content space-y-6">
-                {{.Readme}}
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Method</th>
+          <th>Request</th>
+          <th>Response</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{- range .Methods }}
+        <tr id="method-{{$service.Name}}.{{.Name}}">
+          <td data-label="Method">
+            <div class="method-cell">
+              <div class="method-name">
+                {{.Name}}
+                <a href="#method-{{$service.Name}}.{{.Name}}" class="anchor-link" aria-label="Link to {{$service.Name}}.{{.Name}}">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                  </svg>
+                </a>
               </div>
-            </li>
-          </ul>
-          {{- end }}
-        </td>
-        <td data-label="Request">{{ template "message_link" .Request }}</td>
-        <td data-label="Response">{{ template "message_link" .Response }}</td>
-      </div>
-      {{- end }}
-    </tbody>
+              <span class="method-endpoint">POST /twirp/{{$package}}.{{$service.Name}}/{{.Name}}</span>
+              {{- if .Doc }}
+              <div class="method-description">
+                {{ template "doc" .Doc }}
+              </div>
+              {{- end }}
+
+              {{- if .Readme }}
+              <div class="accordion">
+                <div class="accordion-item">
+                  <div class="accordion-header">
+                    <span>Documentation</span>
+                    <svg class="accordion-icon" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                  </div>
+                  <div class="accordion-content prose">
+                    {{.Readme}}
+                  </div>
+                </div>
+              </div>
+              {{- end }}
+            </div>
+          </td>
+          <td data-label="Request">{{ template "message_link" .Request }}</td>
+          <td data-label="Response">{{ template "message_link" .Response }}</td>
+        </tr>
+        {{- end }}
+      </tbody>
     </table>
   </div>
 </div>
 {{- end }}
-
 {{- end }}
 
+<!-- Messages Section -->
 {{- if .Messages }}
-
-<h4 class="section-header text-2xl md:text-3xl font-extrabold">Messages</h4>
+<h2 class="section-header">Messages</h2>
 
 {{- range .Messages }}
-<div id="message-{{.Name}}" class="uk-card uk-card-body mb-6">
-  <h3 class="uk-card-title anchor-heading">
-    {{ .Name }}
-    <a href="#message-{{.Name}}" class="anchor-link" aria-label="Link to {{.Name}}">
-      <uk-icon icon="link"></uk-icon>
-    </a>
-  </h3>
+<div id="message-{{.Name}}" class="card">
+  <div class="card-header">
+    <h3 class="card-title">
+      {{ .Name }}
+      <a href="#message-{{.Name}}" class="anchor-link" aria-label="Link to {{.Name}}">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+        </svg>
+      </a>
+    </h3>
+  </div>
+
   {{ template "doc" .Doc }}
 
   {{ if .Fields }}
-  <div class="overflow-x-auto">
-    <table
-      class="uk-table uk-table-divider uk-table-responsive uk-table-responsive-stack w-full"
-      >
-    <thead>
-      <tr>
-        <th>Field</th>
-        <th class="w-40">Type</th>
-      </tr>
-    </thead>
-    <tbody>
-      {{- range .Fields }}
-      <tr>
-        {{- if .OneOf }}
-        <td data-label="Type" colspan="2">
-          <h4 class="font-bold">One of:</h4>
-          <table
-            class="uk-table uk-table-divider uk-table-responsive uk-table-responsive-stack">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Type</th>
-              </tr>
-            </thead>
-            <tbody>
-              {{- range $name, $type := .OneOf }}
-              <tr>
-                <td data-label="Field">{{$name}}</td>
-                <td data-label="Type">{{ template "field_type" $type }}</td>
-              </tr>
-              {{- end }}
-            </tbody>
-          </table>
-        </td>
-        {{- else }}
-        <td data-label="Field">
-          <p>{{.Name}}</p>
-          {{ template "doc" .Doc }}
-        </td>
-        <td data-label="Type">{{ template "field_type" .Type }}</td>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Field</th>
+          <th style="width: 40%;">Type</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{- range .Fields }}
+        <tr>
+          {{- if .OneOf }}
+          <td data-label="Field" colspan="2">
+            <div style="font-weight: 600; margin-bottom: 0.5rem;">One of:</div>
+            <div class="table-wrapper" style="margin: 0;">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Type</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {{- range $name, $type := .OneOf }}
+                  <tr>
+                    <td data-label="Name">{{$name}}</td>
+                    <td data-label="Type">{{ template "field_type" $type }}</td>
+                  </tr>
+                  {{- end }}
+                </tbody>
+              </table>
+            </div>
+          </td>
+          {{- else }}
+          <td data-label="Field">
+            <div style="font-weight: 600; margin-bottom: 0.25rem;">{{.Name}}</div>
+            {{ template "doc" .Doc }}
+          </td>
+          <td data-label="Type">{{ template "field_type" .Type }}</td>
+          {{- end }}
+        </tr>
         {{- end }}
-      </tr>
-      {{- end }}
-    </tbody>
+      </tbody>
     </table>
   </div>
   {{ end }}
 
   {{- with .Readme }}
-  <div class="space-y-6 mt-6">
+  <div class="prose" style="margin-top: 1.5rem;">
     {{ . }}
   </div>
   {{- end }}
 </div>
 {{- end }}
-
 {{- end }}
 
+<!-- Enums Section -->
 {{- if .Enums }}
-
-<h4 class="section-header text-2xl md:text-3xl font-extrabold">Enums</h4>
+<h2 class="section-header">Enums</h2>
 
 {{- range .Enums }}
-<div id="enum-{{.Name}}" class="uk-card uk-card-body mb-6">
-  <h3 class="uk-card-title anchor-heading">
-    {{ .Name }}
-    <a href="#enum-{{.Name}}" class="anchor-link" aria-label="Link to {{.Name}}">
-      <uk-icon icon="link"></uk-icon>
-    </a>
-  </h3>
+<div id="enum-{{.Name}}" class="card">
+  <div class="card-header">
+    <h3 class="card-title">
+      {{ .Name }}
+      <a href="#enum-{{.Name}}" class="anchor-link" aria-label="Link to {{.Name}}">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+        </svg>
+      </a>
+    </h3>
+  </div>
+
   {{ template "doc" .Doc }}
 
   {{ if .Values }}
-  <div class="overflow-x-auto">
-    <table
-      class="uk-table uk-table-divider uk-table-responsive uk-table-responsive-stack w-full"
-      >
-    <thead>
-      <tr>
-        <th>Value</th>
-        <th class="w-20">Number</th>
-      </tr>
-    </thead>
-    <tbody>
-      {{- range .Values }}
-      <tr>
-        <td data-label="Value">
-          <p class="font-mono">{{.Name}}</p>
-          {{ template "doc" .Doc }}
-        </td>
-        <td data-label="Number" class="font-mono">{{.Number}}</td>
-      </tr>
-      {{- end }}
-    </tbody>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Value</th>
+          <th style="width: 25%;">Number</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{- range .Values }}
+        <tr>
+          <td data-label="Value">
+            <div style="font-family: monospace; font-weight: 600; margin-bottom: 0.25rem;">{{.Name}}</div>
+            {{ template "doc" .Doc }}
+          </td>
+          <td data-label="Number" style="font-family: monospace;">{{.Number}}</td>
+        </tr>
+        {{- end }}
+      </tbody>
     </table>
   </div>
   {{ end }}
 
   {{- with .Readme }}
-  <div class="space-y-6 mt-6">
+  <div class="prose" style="margin-top: 1.5rem;">
     {{ . }}
   </div>
   {{- end }}
 </div>
 {{- end }}
-
 {{- end }}
 
 {{- end }}

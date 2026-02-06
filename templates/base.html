@@ -14,13 +14,16 @@
     <link rel="icon" href="{{base_path}}/assets/favicon-white.ico" type="image/x-icon">
     <link rel="icon" href="{{base_path}}/assets/favicon-black.ico" type="image/x-icon" media="(prefers-color-scheme: light)">
     <link rel="icon" href="{{base_path}}/assets/favicon-white.ico" type="image/x-icon" media="(prefers-color-scheme: dark)">
-    <title>{{.Title}} - Elephant documentation</title>
-    <link rel="stylesheet" href="{{base_path}}/assets/css/franken-ui-core.2.1.0.css" />
-    <link rel="stylesheet" href="{{base_path}}/assets/css/franken-ui-utilities.2.1.0.css" />
-    <link rel="stylesheet" href="{{base_path}}/assets/css/theme.css" />
-    <link rel="stylesheet" href="{{base_path}}/assets/css/tailwind.css" />
-    <script src="{{base_path}}/assets/js/franken-ui-core.2.1.0.iife.js" type="module"></script>
-    <script src="{{base_path}}/assets/js/franken-ui-icon.2.1.0.iife.js" type="module"></script>
+    <title>{{.Title}} - Elephant Documentation</title>
+    <script>
+      // Prevent flash of light theme - runs immediately before any rendering
+      (function() {
+        const theme = localStorage.getItem('theme') ||
+          (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', theme);
+      })();
+    </script>
+    <link rel="stylesheet" href="{{base_path}}/assets/css/modern-theme.css" />
   </head>
 {{end}}
 
@@ -31,96 +34,190 @@
 {{define "header" -}}
 {{template "raw_header" .}}
 <body>
-  <div class="content-wrapper p-4 md:p-6 lg:p-10">
-    <div class="flex items-center mb-6">
-      <div class="flex-1 space-y-1">
-        <h2 class="text-xl md:text-2xl font-bold tracking-tight">{{.Title }} - Elephant documentation</h2>
+  <!-- Header -->
+  <header class="docs-header" id="docs-header">
+    <nav class="nav-primary">
+      <div class="logo">🐘 Elephant Docs</div>
+      <div class="nav-actions">
+        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode">
+          <svg class="theme-icon-light" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <svg class="theme-icon-dark" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="display: none;">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+        <button class="mobile-menu-toggle" onclick="toggleMobileNav()" aria-label="Toggle navigation">
+          <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
       </div>
-    </div>
-    <div class="border-border my-4 md:my-6 border-t"></div>
+    </nav>
+  </header>
 
-    <!-- Mobile Navigation Toggle -->
-    <button class="mobile-nav-toggle" onclick="toggleMobileNav()" aria-label="Toggle navigation">
-      <uk-icon icon="menu" ratio="1.5"></uk-icon>
-    </button>
+  <!-- Sidebar Overlay for mobile -->
+  <div class="sidebar-overlay" onclick="toggleMobileNav()"></div>
 
-    <!-- Sidebar Overlay for mobile -->
-    <div class="sidebar-overlay" onclick="toggleMobileNav()"></div>
-
-    <div class="flex flex-col lg:flex-row gap-6 lg:gap-x-12">
-      <aside class="sidebar w-full lg:w-1/6 lg:sticky lg:top-6 lg:self-start">
-        <div class="flex justify-between items-center lg:hidden mb-4">
-          <h3 class="font-bold text-lg">Navigation</h3>
-          <button onclick="toggleMobileNav()" class="p-2" aria-label="Close navigation">
-            <uk-icon icon="close" ratio="1.2"></uk-icon>
-          </button>
-        </div>
-        <ul class="uk-nav uk-nav-default space-y-1" data-uk-nav>
+  <!-- Main Container -->
+  <div class="docs-container">
+    <div class="docs-layout">
+      <!-- Sidebar -->
+      <aside class="sidebar" id="sidebar">
+        <nav class="nav-tree">
           {{ range .Menu }}
           {{ if .Children }}
-          <li class="uk-parent">
-            <a href="{{if .HRef}}{{abs_url .HRef}}{{else}}#{{end}}">
+          <li class="nav-parent" onclick="toggleNavParent(event)">
+            <a href="{{if .HRef}}{{abs_url .HRef}}{{else}}#{{end}}" class="nav-item">
               {{.Title}}
-              <span data-uk-nav-parent-icon></span>
+              <span class="nav-chevron">
+                <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+              </span>
             </a>
-            <ul class="uk-nav-sub">
+            <ul class="nav-sub">
               {{ range .Children }}
-              <li {{if .Active }}class="uk-active"{{end}}><a href="{{abs_url .HRef}}">{{.Title}}</a></li>
+              <li>
+                <a href="{{abs_url .HRef}}" class="nav-item {{if .Active}}active{{end}}">{{.Title}}</a>
+              </li>
               {{ end }}
             </ul>
           </li>
-
           {{ else }}
           <li>
-            <a href="{{if .HRef}}{{abs_url .HRef}}{{else}}#{{end}}">{{.Title}}</a>
+            <a href="{{if .HRef}}{{abs_url .HRef}}{{else}}#{{end}}" class="nav-item">{{.Title}}</a>
           </li>
           {{ end }}
           {{ end }}
-        </ul>
+        </nav>
       </aside>
-      <div class="flex-1 min-w-0">
-        <div class="space-y-6">
-          {{if .Breadcrumb}}
-          <nav aria-label="Breadcrumb">
-            <ul class="uk-breadcrumb">
-              {{range .Breadcrumb}}
-              {{if .HRef}}
-              <li><a href="{{abs_url .HRef}}">{{.Title}}</a></li>
-              {{else}}
-              <li><span aria-current="page">{{.Title}}</span></a></li>
-              {{end}}
-              {{end}}
-            </ul>
-          </nav>
+
+      <!-- Content -->
+      <main class="content">
+        {{if .Breadcrumb}}
+        <nav aria-label="Breadcrumb" class="breadcrumb">
+          {{range .Breadcrumb}}
+          <div class="breadcrumb-item">
+            {{if .HRef}}
+            <a href="{{abs_url .HRef}}">{{.Title}}</a>
+            {{else}}
+            <span>{{.Title}}</span>
+            {{end}}
+          </div>
           {{end}}
+        </nav>
+        {{end}}
 {{end}}
 
 {{define "footer"}}
-        </div>
-      </div>
+      </main>
     </div>
   </div>
 
   <script>
+    // Theme management
+    function getTheme() {
+      return localStorage.getItem('theme') ||
+        (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    }
+
+    function setTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('theme', theme);
+
+      const lightIcon = document.querySelector('.theme-icon-light');
+      const darkIcon = document.querySelector('.theme-icon-dark');
+
+      if (theme === 'dark') {
+        lightIcon.style.display = 'none';
+        darkIcon.style.display = 'block';
+      } else {
+        lightIcon.style.display = 'block';
+        darkIcon.style.display = 'none';
+      }
+    }
+
+    function toggleTheme() {
+      const currentTheme = getTheme();
+      setTheme(currentTheme === 'dark' ? 'light' : 'dark');
+    }
+
+    // Initialize theme
+    setTheme(getTheme());
+
+    // Mobile navigation
     function toggleMobileNav() {
-      const sidebar = document.querySelector('.sidebar');
+      const sidebar = document.getElementById('sidebar');
       const overlay = document.querySelector('.sidebar-overlay');
       sidebar.classList.toggle('active');
       overlay.classList.toggle('active');
     }
 
-    // Close mobile nav only when clicking on actual navigation links (not parent toggles)
-    document.querySelectorAll('.sidebar a').forEach(link => {
-      link.addEventListener('click', (e) => {
-        // Check if this is a parent toggle (has data-uk-nav-parent-icon or is in uk-parent)
-        const isParentToggle = link.closest('.uk-parent') &&
-                              !link.closest('.uk-nav-sub') &&
-                              link.querySelector('[data-uk-nav-parent-icon]');
+    // Navigation parent toggle
+    function toggleNavParent(event) {
+      const target = event.currentTarget;
+      const clickedElement = event.target;
 
-        // Only close on mobile if it's not a parent toggle and has a real href
-        if (window.innerWidth < 1024 && !isParentToggle && link.getAttribute('href') !== '#') {
-          toggleMobileNav();
+      // If clicking on a child nav item (in nav-sub), don't prevent it
+      const clickedNavItem = clickedElement.closest('.nav-item');
+      if (clickedNavItem && clickedNavItem.closest('.nav-sub')) {
+        // This is a child link, let it navigate
+        if (window.innerWidth < 1024) {
+          setTimeout(() => toggleMobileNav(), 100);
         }
+        return;
+      }
+
+      // If clicking the chevron or parent nav item, toggle expansion
+      const isChevron = clickedElement.closest('.nav-chevron');
+      const isParentLink = clickedElement.closest('.nav-item') && !clickedElement.closest('.nav-sub');
+
+      if (isChevron || (isParentLink && target.classList.contains('nav-parent'))) {
+        event.preventDefault();
+        target.classList.toggle('expanded');
+      }
+    }
+
+    // Auto-expand active nav items
+    document.querySelectorAll('.nav-item.active').forEach(item => {
+      const parent = item.closest('.nav-parent');
+      if (parent) {
+        parent.classList.add('expanded');
+      }
+    });
+
+    // Header scroll effect
+    let lastScroll = 0;
+    const header = document.getElementById('docs-header');
+
+    window.addEventListener('scroll', () => {
+      const currentScroll = window.pageYOffset;
+
+      if (currentScroll > 10) {
+        header.classList.add('scrolled');
+      } else {
+        header.classList.remove('scrolled');
+      }
+
+      lastScroll = currentScroll;
+    });
+
+    // Accordion functionality
+    document.querySelectorAll('.accordion-header').forEach(header => {
+      header.addEventListener('click', () => {
+        const item = header.closest('.accordion-item');
+        item.classList.toggle('expanded');
       });
     });
   </script>
