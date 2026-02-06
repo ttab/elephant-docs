@@ -12,6 +12,7 @@
 {{- $module := .Module }}
 
 {{- range .Versions }}
+{{- if .Log }}
 <div class="card {{if .IsPrerelease}}prerelease{{end}}">
   <div class="card-header">
     <h3 class="card-title">
@@ -21,34 +22,24 @@
       {{.Commit.Author.When.Format "January 2, 2006"}}
     </span>
   </div>
-
-  {{- if .Log }}
-  <div class="table-wrapper">
-    <table>
-      <thead>
-        <tr>
-          <th style="width: 100px;">Hash</th>
-          <th style="width: 25%;">Author</th>
-          <th>Message</th>
-        </tr>
-      </thead>
-      <tbody>
-        {{- range .Log }}
-        <tr>
-          <td data-label="Hash">
-            <a href="https://{{$module.Name}}/commit/{{.Hash}}" style="font-family: monospace; font-size: 0.875rem;">
-              {{.Hash}}
-            </a>
-          </td>
-          <td data-label="Author">{{ .Author.Name }}</td>
-          <td data-label="Message">{{ commit_message .Message }}</td>
-        </tr>
-        {{- end }}
-      </tbody>
-    </table>
+  <div class="changelog-commits">
+    {{- range .Log }}
+    <div class="changelog-commit">
+      <div class="changelog-commit-meta">
+        <span>{{ .Author.Name }}</span>
+        <a href="https://{{$module.Name}}/commit/{{.Hash}}" class="changelog-commit-hash">{{slice .Hash.String 0 10}}</a>
+      </div>
+      <div class="changelog-commit-message">{{ commit_message .Message }}</div>
+    </div>
+    {{- end }}
   </div>
-  {{- end }}
 </div>
+{{- else }}
+<div class="changelog-empty-version {{if .IsPrerelease}}prerelease{{end}}">
+  <a href="{{base_path}}/apis/{{$c.Name}}/{{.Tag}}">{{ .Tag }}</a>
+  <span class="changelog-empty-date">{{.Commit.Author.When.Format "Jan 2006"}}</span>
+</div>
+{{- end }}
 {{- end }}
 
 {{- end }}
