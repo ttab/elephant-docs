@@ -1,0 +1,71 @@
+{{template "header" .}}
+
+{{- with .Contents }}
+<div class="page-header">
+  <div style="color: var(--color-text-muted); font-size: 0.875rem; margin-bottom: 0.5rem;">
+    <a href="{{base_path}}/apis/{{.API}}/{{.Version}}#service-{{.ServiceName}}" style="color: var(--color-link);">{{.ServiceName}}</a>
+    <span style="color: var(--color-text-light);"> / </span>
+    {{.MethodName}}
+  </div>
+
+  <h1 style="margin-bottom: 1rem;">{{.MethodName}}</h1>
+
+  <div class="version-badge">{{.Version}}</div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">Method Details</h3>
+  </div>
+
+  {{ template "doc" .Doc }}
+
+  <div class="table-wrapper" style="margin-top: 1.5rem;">
+    <table>
+      <tbody>
+        <tr>
+          <td style="font-weight: 600; width: 150px;">Endpoint</td>
+          <td>
+            <code style="font-size: 0.875rem;">POST /twirp/{{.Package}}.{{.ServiceName}}/{{.MethodName}}</code>
+          </td>
+        </tr>
+        <tr>
+          <td style="font-weight: 600;">Request</td>
+          <td>{{ template "message_link" .Request }}</td>
+        </tr>
+        <tr>
+          <td style="font-weight: 600;">Response</td>
+          <td>{{ template "message_link" .Response }}</td>
+        </tr>
+        <tr>
+          <td style="font-weight: 600;">Service</td>
+          <td>
+            <a href="{{base_path}}/apis/{{.API}}/{{.Version}}#service-{{.ServiceName}}">{{.ServiceName}}</a>
+          </td>
+        </tr>
+        <tr>
+          <td style="font-weight: 600;">API Version</td>
+          <td>
+            <a href="{{base_path}}/apis/{{.API}}/{{.Version}}">{{.Version}}</a>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{{- if .Readme }}
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">Documentation</h3>
+  </div>
+
+  <div class="prose">
+    {{.Readme}}
+  </div>
+</div>
+{{- end }}
+
+{{- end }}
+
+{{template "footer" .}}

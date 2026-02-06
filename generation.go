@@ -50,6 +50,18 @@ type APIData struct {
 	Dependencies map[string]API
 }
 
+type MethodPage struct {
+	API         string
+	Version     string
+	Package     string
+	ServiceName string
+	MethodName  string
+	Request     MessageRef
+	Response    MessageRef
+	Doc         []string
+	Readme      template.HTML
+}
+
 type Module struct {
 	Title         string
 	Name          string
@@ -487,11 +499,15 @@ func renderModuleVersionPages(
 			return fmt.Errorf("missing config for %q", api)
 		}
 
+		// Clone template for this specific API
+		apiTpl, err := localTpl.Clone()
+		if err != nil {
+			return fmt.Errorf("clone template for API: %w", err)
+		}
+
 		localFuncs := maps.Clone(funcs)
-
 		localFuncs["message_href"] = apiMessageHRef(data, basePath)
-
-		localTpl.Funcs(localFuncs)
+		apiTpl.Funcs(localFuncs)
 
 		readme, err := renderMarkdownGitFileIfExists(
 			docCommit,
@@ -546,13 +562,88 @@ func renderModuleVersionPages(
 			},
 		}
 
+		// Create a template with method-specific message_href function
+		methodTpl, err := localTpl.Clone()
+		if err != nil {
+			return fmt.Errorf("clone template for methods: %w", err)
+		}
+
+		methodFuncs := maps.Clone(funcs)
+		methodFuncs["message_href"] = methodMessageHRef(data, basePath, api, version.Tag)
+		methodTpl.Funcs(methodFuncs)
+
 		err = renderPage(
 			versionOutDir,
-			localTpl, "api_version.html", page)
+			apiTpl, "api_version.html", page)
 		if err != nil {
 			return fmt.Errorf(
 				"render version page for %s@%s: %w",
 				api, version.Tag, err)
+		}
+
+		// Render method pages for methods with documentation
+		for _, decl := range data.Declarations {
+			for _, service := range decl.Services {
+				for _, method := range service.Methods {
+					if method.Readme == "" {
+						continue
+					}
+
+					methodPage := MethodPage{
+						API:         api,
+						Version:     version.Tag,
+						Package:     decl.Package,
+						ServiceName: service.Name,
+						MethodName:  method.Name,
+						Request:     method.Request,
+						Response:    method.Response,
+						Doc:         method.Doc,
+						Readme:      method.Readme,
+					}
+
+					methodDir := filepath.Join(versionOutDir, "methods", service.Name, method.Name)
+					err = os.MkdirAll(methodDir, 0o770)
+					if err != nil {
+						return fmt.Errorf("create method dir: %w", err)
+					}
+
+					methodPageData := Page{
+						Title: method.Name,
+						Menu:  markActive(apiMenu, "/"+apiDir),
+						Contents: methodPage,
+						Breadcrumb: []MenuItem{
+							{
+								Title: "Home",
+								HRef:  "/",
+							},
+							{
+								Title: conf.Title,
+								HRef:  "/" + apiDir,
+							},
+							{
+								Title: version.Tag,
+								HRef:  "/" + versionDir,
+							},
+							{
+								Title: service.Name,
+								HRef:  "/" + versionDir + "#service-" + service.Name,
+							},
+							{
+								Title: method.Name,
+							},
+						},
+					}
+
+					err = renderPage(
+						methodDir,
+						methodTpl, "method_page.html", methodPageData)
+					if err != nil {
+						return fmt.Errorf(
+							"render method page for %s.%s: %w",
+							service.Name, method.Name, err)
+					}
+				}
+			}
 		}
 	}
 
@@ -704,6 +795,58 @@ func apiMessageHRef(data APIData, basePath string) func(ref MessageRef) string {
 				prefix := getTypePrefix(data.Declarations, ref.Message)
 
 				return fmt.Sprintf("#%s-%s", prefix, ref.Message)
+			}
+		}
+
+		for _, dep := range data.Dependencies {
+			for _, decl := range dep.Data.Declarations {
+				if decl.Package != ref.Package {
+					continue
+				}
+
+				prefix := getTypePrefix(dep.Data.Declarations, ref.Message)
+
+				return fmt.Sprintf("%s/apis/%s/%s#%s-%s",
+					basePath, dep.Name, dep.Version, prefix, ref.Message)
+			}
+
+			// Second go at resolving the package using the base
+			// name.
+			for _, decl := range dep.Data.Declarations {
+				pIdx := strings.LastIndex(decl.Package, ".")
+				if pIdx == -1 {
+					continue
+				}
+
+				baseName := decl.Package[pIdx+1:]
+				if baseName != ref.Package {
+					continue
+				}
+
+				prefix := getTypePrefix(dep.Data.Declarations, ref.Message)
+
+				return fmt.Sprintf("%s/apis/%s/%s#%s-%s",
+					basePath, dep.Name, dep.Version, prefix, ref.Message)
+			}
+		}
+
+		return ""
+	}
+}
+
+func methodMessageHRef(data APIData, basePath, apiName, version string) func(ref MessageRef) string {
+	return func(ref MessageRef) string {
+		if ref.Package == "" {
+			prefix := getTypePrefix(data.Declarations, ref.Message)
+
+			return fmt.Sprintf("%s/apis/%s/%s#%s-%s", basePath, apiName, version, prefix, ref.Message)
+		}
+
+		for _, decl := range data.Declarations {
+			if decl.Package == ref.Package {
+				prefix := getTypePrefix(data.Declarations, ref.Message)
+
+				return fmt.Sprintf("%s/apis/%s/%s#%s-%s", basePath, apiName, version, prefix, ref.Message)
 			}
 		}
 
