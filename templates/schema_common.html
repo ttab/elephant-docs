@@ -40,7 +40,24 @@
 {{ define "field_constraint_tags" -}}
 {{- if .Optional }}<span class="constraint-tag tag-optional">optional</span>{{ end -}}
 {{- if .AllowEmpty }}<span class="constraint-tag tag-allow-empty">allow empty</span>{{ end -}}
-{{- if .Format }}{{- if eq (printf "%s" .Format) "html" }}<a href="{{abs_url (print "/schemas/policies/" (or .HTMLPolicy "default") "/")}}" class="constraint-tag tag-format">html{{if .HTMLPolicy}} ({{.HTMLPolicy}}){{end}}</a>{{- else }}<span class="constraint-tag tag-format">{{.Format}}</span>{{- end }}{{ end -}}
+
+{{- if .Format }}
+{{- if eq (printf "%s" .Format) "html" -}}
+<a href="{{abs_url (print "/schemas/policies/" (or .HTMLPolicy "default") "/")}}" class="constraint-tag tag-format">html
+  {{- if .HTMLPolicy}} ({{.HTMLPolicy}}){{end}}
+</a>
+{{- else if eq (printf "%s" .Format) "colour" -}}
+<span class="constraint-tag tag-format">colour
+  {{- if .ColourFormats}}:
+  {{- range $i, $v := .ColourFormats }}{{if $i}},{{end}} {{$v}}{{- end }}
+  {{- end}}
+</span>
+{{- else if eq (printf "%s" .Format) "wkt" -}}
+<span class="constraint-tag tag-format">wkt{{if .Geometry}}: {{.Geometry}}{{end}}</span>
+{{- else }}<span class="constraint-tag tag-format">{{.Format}}</span>
+{{- end }}
+{{- end }}
+
 {{- if .Time }}<span class="constraint-tag tag-format">time: {{.Time}}</span>{{ end -}}
 {{- if .Const }}<span class="constraint-tag tag-const">= "{{deref_string .Const}}"</span>{{ end -}}
 {{- if .Pattern }}<span class="constraint-tag tag-pattern">pattern</span>{{ end -}}
@@ -48,8 +65,6 @@
 {{- if .Enum }}<span class="constraint-tag tag-enum">enum: {{- range $i, $v := .Enum }}{{if $i}},{{end}} {{$v}}{{- end }}</span>{{ end -}}
 {{- if .EnumRef }}<a href="{{abs_url (print "/schemas/enums/" (schema_slug .EnumRef) "/")}}" class="constraint-tag tag-enum-ref">enum: {{.EnumRef}}</a>{{ end -}}
 {{- if and .HTMLPolicy (ne (printf "%s" .Format) "html") }}<a href="{{abs_url (print "/schemas/policies/" .HTMLPolicy "/")}}" class="constraint-tag tag-policy">policy: {{.HTMLPolicy}}</a>{{ end -}}
-{{- if .Geometry }}<span class="constraint-tag tag-format">geometry: {{.Geometry}}</span>{{ end -}}
-{{- if .ColourFormats }}{{- range .ColourFormats }}<span class="constraint-tag tag-format">{{.}}</span>{{ end -}}{{ end -}}
 {{- if .Labels }}{{- range .Labels }}<span class="constraint-tag tag-label">label: {{.}}</span>{{ end -}}{{ end -}}
 {{- if .Deprecated }}{{ template "deprecation_notice" .Deprecated }}{{ end -}}
 {{- end }}
