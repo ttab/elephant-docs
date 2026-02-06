@@ -693,49 +693,73 @@ func renderAPILandingPages(
 
 func apiMessageHRef(data APIData, basePath string) func(ref MessageRef) string {
 	return func(ref MessageRef) string {
-		// Helper function to determine if a name is a message or enum
-		getTypePrefix := func(decls []ProtoDeclarations, name string) string {
-			for _, d := range decls {
-				for _, m := range d.Messages {
-					if m.Name == name {
-						return "message"
-					}
-				}
-				for _, e := range d.Enums {
-					if e.Name == name {
-						return "enum"
-					}
-				}
-			}
-			return "message" // default to message for backwards compatibility
-		}
-
 		if ref.Package == "" {
 			prefix := getTypePrefix(data.Declarations, ref.Message)
+
 			return fmt.Sprintf("#%s-%s", prefix, ref.Message)
 		}
 
 		for _, decl := range data.Declarations {
 			if decl.Package == ref.Package {
 				prefix := getTypePrefix(data.Declarations, ref.Message)
+
 				return fmt.Sprintf("#%s-%s", prefix, ref.Message)
 			}
 		}
 
-		for dApi, dep := range data.Dependencies {
+		for _, dep := range data.Dependencies {
 			for _, decl := range dep.Data.Declarations {
 				if decl.Package != ref.Package {
 					continue
 				}
 
 				prefix := getTypePrefix(dep.Data.Declarations, ref.Message)
-				return fmt.Sprintf("%s/apis/%s/%s/#%s-%s",
-					basePath, dApi, dep.Version, prefix, ref.Message)
+
+				return fmt.Sprintf("%s/apis/%s/%s#%s-%s",
+					basePath, dep.Name, dep.Version, prefix, ref.Message)
+			}
+
+			// Second go at resolving the package using the base
+			// name.
+			for _, decl := range dep.Data.Declarations {
+				pIdx := strings.LastIndex(decl.Package, ".")
+				if pIdx == -1 {
+					continue
+				}
+
+				baseName := decl.Package[pIdx+1:]
+				if baseName != ref.Package {
+					continue
+				}
+
+				prefix := getTypePrefix(dep.Data.Declarations, ref.Message)
+
+				return fmt.Sprintf("%s/apis/%s/%s#%s-%s",
+					basePath, dep.Name, dep.Version, prefix, ref.Message)
 			}
 		}
 
 		return ""
 	}
+}
+
+// Helper function to determine if a name is a message or enum
+func getTypePrefix(decls []ProtoDeclarations, name string) string {
+	for _, d := range decls {
+		for _, m := range d.Messages {
+			if m.Name == name {
+				return "message"
+			}
+		}
+
+		for _, e := range d.Enums {
+			if e.Name == name {
+				return "enum"
+			}
+		}
+	}
+
+	return "message" // default to message for backwards compatibility
 }
 
 func renderPage(
