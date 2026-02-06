@@ -2,7 +2,10 @@
 {{- with .Contents }}
 
 <div class="page-header">
-  <h1>{{.Title}}</h1>
+  <div class="page-title">
+    <h1>{{.Title}}</h1>
+    <span class="version-badge">{{.Version}}</span>
+  </div>
   <p style="color: var(--color-text-muted); margin-top: 0.5rem;">
     Validation schemas for Elephant document types
   </p>

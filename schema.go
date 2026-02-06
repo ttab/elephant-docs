@@ -3,10 +3,10 @@ package elephantdocs
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"slices"
 	"strings"
 
+	"github.com/go-git/go-git/v6/plumbing/object"
 	"github.com/ttab/revisor"
 )
 
@@ -92,23 +92,33 @@ type blockDef struct {
 	block   revisor.BlockConstraint
 }
 
-// loadConstraintSets reads and deserializes all configured JSON files.
-func loadConstraintSets(conf SchemaGroupConfig) ([]revisor.ConstraintSet, error) {
+// loadConstraintSets reads and deserializes schema JSON files from a git commit tree.
+func loadConstraintSets(commit *object.Commit, conf SchemaGroupConfig) ([]revisor.ConstraintSet, error) {
+	tree, err := commit.Tree()
+	if err != nil {
+		return nil, fmt.Errorf("get commit tree: %w", err)
+	}
+
 	sets := make([]revisor.ConstraintSet, 0, len(conf.Sets))
 
 	for _, sc := range conf.Sets {
-		f, err := os.Open(sc.File)
+		f, err := tree.File(sc.File)
 		if err != nil {
 			return nil, fmt.Errorf("open schema %q: %w", sc.File, err)
 		}
 
-		dec := json.NewDecoder(f)
+		reader, err := f.Reader()
+		if err != nil {
+			return nil, fmt.Errorf("read schema %q: %w", sc.File, err)
+		}
+
+		dec := json.NewDecoder(reader)
 
 		var cs revisor.ConstraintSet
 
 		err = dec.Decode(&cs)
 
-		f.Close()
+		reader.Close()
 
 		if err != nil {
 			return nil, fmt.Errorf("decode schema %q: %w", sc.File, err)

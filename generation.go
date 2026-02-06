@@ -205,11 +205,21 @@ func Generate(
 
 	// Load and resolve schemas if configured.
 	var schemaDoc *SchemaDoc
+	var schemaTag string
 
 	if conf.Schemas != nil {
-		uiPrintln("Loading schemas...")
+		uiPrintln("Cloning %s", conf.Schemas.Repo)
 
-		constraintSets, err := loadConstraintSets(*conf.Schemas)
+		var schemaCommit *object.Commit
+
+		_, schemaCommit, schemaTag, err = cloneSchemaRepo(*conf.Schemas)
+		if err != nil {
+			return fmt.Errorf("clone schema repo: %w", err)
+		}
+
+		uiPrintln("Using schema version %s", schemaTag)
+
+		constraintSets, err := loadConstraintSets(schemaCommit, *conf.Schemas)
 		if err != nil {
 			return fmt.Errorf("load constraint sets: %w", err)
 		}
@@ -433,7 +443,7 @@ func Generate(
 	// Render schema pages.
 	if schemaDoc != nil {
 		grp.Go(func() error {
-			return renderSchemaPages(outDir, schemaDoc, tpl, apiMenu)
+			return renderSchemaPages(outDir, schemaDoc, tpl, apiMenu, schemaTag)
 		})
 	}
 

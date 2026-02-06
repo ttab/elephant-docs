@@ -7,6 +7,8 @@ type Config struct {
 
 type SchemaGroupConfig struct {
 	Title string            `json:"title"`
+	Repo  string            `json:"repo"`
+	Clone string            `json:"clone,omitempty"`
 	Sets  []SchemaSetConfig `json:"sets"`
 }
 

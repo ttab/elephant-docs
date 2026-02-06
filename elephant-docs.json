@@ -50,46 +50,47 @@
   ],
   "schemas": {
     "title": "Document Schemas",
+    "repo": "github.com/ttab/revisorschemas",
     "sets": [
       {
         "name": "core",
         "title": "Core",
-        "file": "testdata/example_schemas/core.json"
+        "file": "core.json"
       },
       {
         "name": "core-planning",
         "title": "Core Planning",
-        "file": "testdata/example_schemas/core-planning.json"
+        "file": "core-planning.json"
       },
       {
         "name": "core-metadoc",
         "title": "Core Metadoc",
-        "file": "testdata/example_schemas/core-metadoc.json"
+        "file": "core-metadoc.json"
       },
       {
         "name": "core-genai",
         "title": "Core GenAI",
-        "file": "testdata/example_schemas/core-genai.json"
+        "file": "core-genai.json"
       },
       {
         "name": "tt",
         "title": "TT",
-        "file": "testdata/example_schemas/tt.json"
+        "file": "tt.json"
       },
       {
         "name": "tt-wires",
         "title": "TT Wires",
-        "file": "testdata/example_schemas/tt-wires.json"
+        "file": "tt-wires.json"
       },
       {
         "name": "tt-print",
         "title": "TT Print",
-        "file": "testdata/example_schemas/tt-print.json"
+        "file": "tt-print.json"
       },
       {
         "name": "tt-planning",
         "title": "TT Planning",
-        "file": "testdata/example_schemas/tt-planning.json"
+        "file": "tt-planning.json"
       }
     ]
   }

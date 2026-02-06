@@ -15,14 +15,78 @@ import (
 	"github.com/ttab/elephant-docs/internal"
 )
 
+// cloneAndFindLatestTag clones a repo into memory and finds the latest
+// non-prerelease semver tag. Returns the repo, latest stable commit, and tag name.
+func cloneAndFindLatestTag(cloneURL string) (*git.Repository, *object.Commit, string, error) {
+	repo, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
+		URL:      cloneURL,
+		Progress: os.Stderr,
+	})
+	if err != nil {
+		return nil, nil, "", fmt.Errorf("git clone: %w", err)
+	}
+
+	tagsRefs, err := repo.Tags()
+	if err != nil {
+		return nil, nil, "", fmt.Errorf("list tags: %w", err)
+	}
+
+	var versions []*ModuleVersion
+
+	err = tagsRefs.ForEach(func(tagRef *plumbing.Reference) error {
+		name := tagRef.Name().Short()
+		if !strings.HasPrefix(name, "v") {
+			return nil
+		}
+
+		version, err := semver.NewVersion(name)
+		if err != nil {
+			return nil
+		}
+
+		commit, err := getCommitObjectForTag(repo, tagRef)
+		if err != nil {
+			return err
+		}
+
+		versions = append(versions, &ModuleVersion{
+			Tag:          name,
+			Commit:       commit,
+			Version:      version,
+			IsPrerelease: version.Prerelease() != "",
+		})
+
+		return nil
+	})
+	if err != nil {
+		return nil, nil, "", fmt.Errorf("collect version tags: %w", err)
+	}
+
+	slices.SortFunc(versions, func(a, b *ModuleVersion) int {
+		return a.Version.Compare(b.Version)
+	})
+
+	slices.Reverse(versions)
+
+	for _, v := range versions {
+		if v.Version.Prerelease() != "" {
+			continue
+		}
+
+		return repo, v.Commit, v.Tag, nil
+	}
+
+	return nil, nil, "", errors.New("no stable version tags found")
+}
+
 func newModule(mod ModuleConfig) (*Module, error) {
-	clone := mod.Clone
-	if clone == "" {
-		mod.Clone = fmt.Sprintf("https://%s", mod.Name)
+	cloneURL := mod.Clone
+	if cloneURL == "" {
+		cloneURL = fmt.Sprintf("https://%s", mod.Name)
 	}
 
 	repo, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
-		URL:      mod.Clone,
+		URL:      cloneURL,
 		Progress: os.Stderr,
 	})
 	if err != nil {
@@ -92,6 +156,17 @@ func newModule(mod ModuleConfig) (*Module, error) {
 	}
 
 	return &module, nil
+}
+
+// cloneSchemaRepo clones the schema repository and returns the commit for
+// the latest stable version tag.
+func cloneSchemaRepo(conf SchemaGroupConfig) (*git.Repository, *object.Commit, string, error) {
+	cloneURL := conf.Clone
+	if cloneURL == "" {
+		cloneURL = fmt.Sprintf("https://%s", conf.Repo)
+	}
+
+	return cloneAndFindLatestTag(cloneURL)
 }
 
 func getChangelog(module *Module, api string) ([]*ModuleVersion, error) {

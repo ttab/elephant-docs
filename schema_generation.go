@@ -14,6 +14,7 @@ import (
 // SchemaOverviewPage is the data for the schema overview template.
 type SchemaOverviewPage struct {
 	Title     string
+	Version   string
 	Documents []DocumentDoc
 	Blocks    []BlockDoc
 	Enums     []EnumDoc
@@ -23,11 +24,13 @@ type SchemaOverviewPage struct {
 
 // SchemaSetPage is the data for the schema set detail template.
 type SchemaSetPage struct {
-	Set SchemaSetDoc
+	Version string
+	Set     SchemaSetDoc
 }
 
 // SchemaDocumentPage is the data for the document type template.
 type SchemaDocumentPage struct {
+	Version  string
 	Document DocumentDoc
 	Enums    []EnumDoc
 	Blocks   []BlockDoc
@@ -35,18 +38,21 @@ type SchemaDocumentPage struct {
 
 // SchemaBlockPage is the data for the block definition template.
 type SchemaBlockPage struct {
-	Block BlockDoc
-	Enums []EnumDoc
+	Version string
+	Block   BlockDoc
+	Enums   []EnumDoc
 }
 
 // SchemaEnumPage is the data for the enum template.
 type SchemaEnumPage struct {
-	Enum EnumDoc
+	Version string
+	Enum    EnumDoc
 }
 
 // SchemaPolicyPage is the data for the HTML policy template.
 type SchemaPolicyPage struct {
-	Policy PolicyDoc
+	Version string
+	Policy  PolicyDoc
 }
 
 // renderSchemaPages generates all schema documentation pages.
@@ -55,6 +61,7 @@ func renderSchemaPages(
 	doc *SchemaDoc,
 	tpl *template.Template,
 	menu []MenuItem,
+	version string,
 ) error {
 	localTpl, err := tpl.Clone()
 	if err != nil {
@@ -69,6 +76,7 @@ func renderSchemaPages(
 		Menu:  markActive(menu, "/schemas"),
 		Contents: SchemaOverviewPage{
 			Title:     "Document Schemas",
+			Version:   version,
 			Documents: doc.Documents,
 			Blocks:    doc.Blocks,
 			Enums:     doc.Enums,
@@ -92,7 +100,8 @@ func renderSchemaPages(
 			Title: set.Title + " Schema Set",
 			Menu:  markActive(menu, "/schemas/"+set.Name),
 			Contents: SchemaSetPage{
-				Set: set,
+				Version: version,
+				Set:     set,
 			},
 			Breadcrumb: []MenuItem{
 				{Title: "Home", HRef: "/"},
@@ -119,6 +128,7 @@ func renderSchemaPages(
 			Title: docDisplayName(d),
 			Menu:  markActive(menu, "/schemas/documents/"+d.Type),
 			Contents: SchemaDocumentPage{
+				Version:  version,
 				Document: d,
 				Enums:    doc.Enums,
 				Blocks:   doc.Blocks,
@@ -148,8 +158,9 @@ func renderSchemaPages(
 			Title: b.ID,
 			Menu:  markActive(menu, "/schemas/blocks/"+b.Kind+"/"+SchemaSlug(b.ID)),
 			Contents: SchemaBlockPage{
-				Block: b,
-				Enums: doc.Enums,
+				Version: version,
+				Block:   b,
+				Enums:   doc.Enums,
 			},
 			Breadcrumb: []MenuItem{
 				{Title: "Home", HRef: "/"},
@@ -177,7 +188,8 @@ func renderSchemaPages(
 			Title: enumDisplayName(e),
 			Menu:  markActive(menu, "/schemas/enums/"+SchemaSlug(e.ID)),
 			Contents: SchemaEnumPage{
-				Enum: e,
+				Version: version,
+				Enum:    e,
 			},
 			Breadcrumb: []MenuItem{
 				{Title: "Home", HRef: "/"},
@@ -204,7 +216,8 @@ func renderSchemaPages(
 			Title: "HTML Policy: " + p.Name,
 			Menu:  markActive(menu, "/schemas/policies/"+p.Name),
 			Contents: SchemaPolicyPage{
-				Policy: p,
+				Version: version,
+				Policy:  p,
 			},
 			Breadcrumb: []MenuItem{
 				{Title: "Home", HRef: "/"},
