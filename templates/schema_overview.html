@@ -144,8 +144,15 @@
       <tbody>
         {{- range .Policies }}
         <tr>
-          <td data-label="Name"><strong>{{.Name}}</strong></td>
-          <td data-label="Uses">{{if .Uses}}{{.Uses}}{{end}}{{if .Extends}}extends: {{.Extends}}{{end}}</td>
+          <td data-label="Name">
+            <a href="{{abs_url (print "/schemas/policies/" .Name "/")}}">
+              <strong>{{.Name}}</strong>
+            </a>
+          </td>
+          <td data-label="Uses">
+            {{- if .Uses }}<a href="{{abs_url (print "/schemas/policies/" .Uses "/")}}">{{.Uses}}</a>{{ end -}}
+            {{- if .Extends }}extends: <a href="{{abs_url (print "/schemas/policies/" .Extends "/")}}">{{.Extends}}</a>{{ end -}}
+          </td>
           <td data-label="Elements">{{len .Elements}} elements</td>
           <td data-label="Set">{{ template "schema_badge" .DeclaredIn }}</td>
         </tr>

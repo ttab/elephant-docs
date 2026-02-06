@@ -123,16 +123,18 @@
 {{- range $set.Set.HTMLPolicies }}
 <div class="card">
   <div class="card-header">
-    <h3 class="card-title">{{.Name}}</h3>
+    <h3 class="card-title">
+      <a href="{{abs_url (print "/schemas/policies/" .Name "/")}}">{{.Name}}</a>
+    </h3>
   </div>
   {{- if .Description }}
   <p style="color: var(--color-text-muted);">{{.Description}}</p>
   {{- end }}
   {{- if .Uses }}
-  <p><span class="constraint-tag">uses: {{.Uses}}</span></p>
+  <p><span class="constraint-tag">uses: <a href="{{abs_url (print "/schemas/policies/" .Uses "/")}}">{{.Uses}}</a></span></p>
   {{- end }}
   {{- if .Extends }}
-  <p><span class="constraint-tag">extends: {{.Extends}}</span></p>
+  <p><span class="constraint-tag">extends: <a href="{{abs_url (print "/schemas/policies/" .Extends "/")}}">{{.Extends}}</a></span></p>
   {{- end }}
   {{- if .Elements }}
   <div class="table-wrapper schema-field-table">

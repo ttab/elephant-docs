@@ -43,6 +43,11 @@ type SchemaEnumPage struct {
 	Enum EnumDoc
 }
 
+// SchemaPolicyPage is the data for the HTML policy template.
+type SchemaPolicyPage struct {
+	Policy PolicyDoc
+}
+
 // renderSchemaPages generates all schema documentation pages.
 func renderSchemaPages(
 	outDir string,
@@ -184,6 +189,33 @@ func renderSchemaPages(
 		})
 		if err != nil {
 			return fmt.Errorf("render schema enum %q: %w", e.ID, err)
+		}
+	}
+
+	// Render HTML policy pages.
+	for _, p := range doc.Policies {
+		policyDir := filepath.Join(outDir, "schemas", "policies", p.Name)
+
+		err = os.MkdirAll(policyDir, 0o770)
+		if err != nil {
+			return fmt.Errorf("create policy dir %q: %w", policyDir, err)
+		}
+
+		err = renderPage(policyDir, localTpl, "schema_policy.html", Page{
+			Title: "HTML Policy: " + p.Name,
+			Menu:  schemaMenu,
+			Contents: SchemaPolicyPage{
+				Policy: p,
+			},
+			Breadcrumb: []MenuItem{
+				{Title: "Home", HRef: "/"},
+				{Title: "Schemas", HRef: "/schemas"},
+				{Title: "Policies"},
+				{Title: p.Name},
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("render schema policy %q: %w", p.Name, err)
 		}
 	}
 
