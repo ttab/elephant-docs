@@ -320,6 +320,9 @@
     const modal = document.getElementById('nav-helper-modal');
     const input = document.getElementById('nav-helper-input');
 
+    // Prevent body scroll
+    document.body.style.overflow = 'hidden';
+
     modal.style.display = 'flex';
     setTimeout(() => {
       input.focus();
@@ -329,6 +332,10 @@
 
   function closeNavigator() {
     const modal = document.getElementById('nav-helper-modal');
+
+    // Restore body scroll
+    document.body.style.overflow = '';
+
     modal.style.display = 'none';
     selectedIndex = -1;
   }
@@ -474,6 +481,18 @@
 
   // Check on load
   toggleBackToTop();
+
+  // Prevent scroll on modal overlay
+  const overlay = document.querySelector('.nav-helper-overlay');
+  if (overlay) {
+    overlay.addEventListener('wheel', (e) => {
+      e.preventDefault();
+    }, { passive: false });
+
+    overlay.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+    }, { passive: false });
+  }
 </script>
 
 {{template "footer" .}}

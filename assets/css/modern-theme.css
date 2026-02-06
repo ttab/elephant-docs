@@ -962,6 +962,7 @@ tbody tr:last-child td {
   align-items: flex-start;
   justify-content: center;
   padding-top: 10vh;
+  overflow: hidden;
 }
 
 .nav-helper-overlay {
@@ -970,6 +971,7 @@ tbody tr:last-child td {
   background: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(4px);
   animation: fadeIn 0.2s ease;
+  overflow: hidden;
 }
 
 .nav-helper-content {
