@@ -281,6 +281,12 @@ func schemaTemplateFuncs() template.FuncMap {
 			return ""
 		},
 		"match_doc_type": matchDocType,
+		"nested_block_ctx": func(kind string, bc *revisor.BlockConstraint) map[string]interface{} {
+			return map[string]interface{}{
+				"Kind":  kind,
+				"Block": bc,
+			}
+		},
 		"glob_patterns": func(gl revisor.GlobList) string {
 			var patterns []string
 			for _, g := range gl {

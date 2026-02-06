@@ -46,7 +46,7 @@
 <h2 class="section-header">Nested Meta</h2>
 {{- range $block.Block.Meta }}
 <div class="card">
-  {{ template "nested_block" . }}
+  {{ template "nested_block" (nested_block_ctx "meta" .) }}
 </div>
 {{- end }}
 {{- end }}
@@ -55,7 +55,7 @@
 <h2 class="section-header">Nested Links</h2>
 {{- range $block.Block.Links }}
 <div class="card">
-  {{ template "nested_block" . }}
+  {{ template "nested_block" (nested_block_ctx "link" .) }}
 </div>
 {{- end }}
 {{- end }}
@@ -64,7 +64,7 @@
 <h2 class="section-header">Nested Content</h2>
 {{- range $block.Block.Content }}
 <div class="card">
-  {{ template "nested_block" . }}
+  {{ template "nested_block" (nested_block_ctx "content" .) }}
 </div>
 {{- end }}
 {{- end }}

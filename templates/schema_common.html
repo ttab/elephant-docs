@@ -123,7 +123,7 @@
   <div class="schema-subsection">
     <h5>Nested Meta</h5>
     {{- range $block.Meta }}
-    {{ template "nested_block" . }}
+    {{ template "nested_block" (nested_block_ctx "meta" .) }}
     {{- end }}
   </div>
   {{- end }}
@@ -131,7 +131,7 @@
   <div class="schema-subsection">
     <h5>Nested Links</h5>
     {{- range $block.Links }}
-    {{ template "nested_block" . }}
+    {{ template "nested_block" (nested_block_ctx "link" .) }}
     {{- end }}
   </div>
   {{- end }}
@@ -139,40 +139,65 @@
   <div class="schema-subsection">
     <h5>Nested Content</h5>
     {{- range $block.Content }}
-    {{ template "nested_block" . }}
+    {{ template "nested_block" (nested_block_ctx "content" .) }}
     {{- end }}
   </div>
   {{- end }}
 </div>
 {{- end }}
 
-{{/* Render a nested *BlockConstraint (not a ResolvedBlock) */}}
+{{/* Render a nested *BlockConstraint with kind context */}}
 {{ define "nested_block" -}}
-{{- $block := . -}}
+{{- $kind := .Kind -}}
+{{- $block := .Block -}}
 <div class="schema-block-detail nested">
   <div class="schema-block-header">
-    {{- if .Name }}<strong>{{.Name}}</strong>{{ end }}
-    {{- if .Ref }}
-    <span class="block-ref-link">ref: {{.Ref}}</span>
+    {{- if $block.Name }}<strong>{{$block.Name}}</strong>{{ end }}
+    {{- if $block.Ref }}
+    <a href="{{abs_url (print "/schemas/blocks/" $kind "/" (schema_slug $block.Ref) "/")}}" class="block-ref-link" title="View block definition">{{$block.Ref}}</a>
     {{- else }}
-    {{ template "block_signature" . }}
-    {{ template "count_constraints" . }}
+    {{ template "block_signature" $block }}
     {{- end }}
+    {{ template "count_constraints" $block }}
   </div>
-  {{- if .Description }}
-  <p class="schema-block-description">{{.Description}}</p>
+  {{- if $block.Description }}
+  <p class="schema-block-description">{{$block.Description}}</p>
   {{- end }}
-  {{ template "deprecation_notice" .Deprecated }}
-  {{- if .Attributes.Keys }}
+  {{ template "deprecation_notice" $block.Deprecated }}
+  {{- if $block.Attributes.Keys }}
   <div class="schema-subsection">
     <h5>Attributes</h5>
-    {{ template "constraint_map_table" .Attributes }}
+    {{ template "constraint_map_table" $block.Attributes }}
   </div>
   {{- end }}
-  {{- if .Data.Keys }}
+  {{- if $block.Data.Keys }}
   <div class="schema-subsection">
     <h5>Data</h5>
-    {{ template "constraint_map_table" .Data }}
+    {{ template "constraint_map_table" $block.Data }}
+  </div>
+  {{- end }}
+  {{- if $block.Meta }}
+  <div class="schema-subsection">
+    <h5>Nested Meta</h5>
+    {{- range $block.Meta }}
+    {{ template "nested_block" (nested_block_ctx "meta" .) }}
+    {{- end }}
+  </div>
+  {{- end }}
+  {{- if $block.Links }}
+  <div class="schema-subsection">
+    <h5>Nested Links</h5>
+    {{- range $block.Links }}
+    {{ template "nested_block" (nested_block_ctx "link" .) }}
+    {{- end }}
+  </div>
+  {{- end }}
+  {{- if $block.Content }}
+  <div class="schema-subsection">
+    <h5>Nested Content</h5>
+    {{- range $block.Content }}
+    {{ template "nested_block" (nested_block_ctx "content" .) }}
+    {{- end }}
   </div>
   {{- end }}
 </div>
