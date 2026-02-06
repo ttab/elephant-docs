@@ -61,14 +61,12 @@ func renderSchemaPages(
 		return fmt.Errorf("clone templates: %w", err)
 	}
 
-	schemaMenu := markActive(menu, "/schemas")
-
 	// Render overview page.
 	overviewDir := filepath.Join(outDir, "schemas")
 
 	err = renderPage(overviewDir, localTpl, "schema_overview.html", Page{
 		Title: "Document Schemas",
-		Menu:  schemaMenu,
+		Menu:  markActive(menu, "/schemas"),
 		Contents: SchemaOverviewPage{
 			Title:     "Document Schemas",
 			Documents: doc.Documents,
@@ -92,7 +90,7 @@ func renderSchemaPages(
 
 		err = renderPage(setDir, localTpl, "schema_set.html", Page{
 			Title: set.Title + " Schema Set",
-			Menu:  schemaMenu,
+			Menu:  markActive(menu, "/schemas/"+set.Name),
 			Contents: SchemaSetPage{
 				Set: set,
 			},
@@ -119,7 +117,7 @@ func renderSchemaPages(
 
 		err = renderPage(docDir, localTpl, "schema_document.html", Page{
 			Title: docDisplayName(d),
-			Menu:  schemaMenu,
+			Menu:  markActive(menu, "/schemas/documents/"+d.Type),
 			Contents: SchemaDocumentPage{
 				Document: d,
 				Enums:    doc.Enums,
@@ -148,7 +146,7 @@ func renderSchemaPages(
 
 		err = renderPage(blockDir, localTpl, "schema_block.html", Page{
 			Title: b.ID,
-			Menu:  schemaMenu,
+			Menu:  markActive(menu, "/schemas/blocks/"+b.Kind+"/"+SchemaSlug(b.ID)),
 			Contents: SchemaBlockPage{
 				Block: b,
 				Enums: doc.Enums,
@@ -177,7 +175,7 @@ func renderSchemaPages(
 
 		err = renderPage(enumDir, localTpl, "schema_enum.html", Page{
 			Title: enumDisplayName(e),
-			Menu:  schemaMenu,
+			Menu:  markActive(menu, "/schemas/enums/"+SchemaSlug(e.ID)),
 			Contents: SchemaEnumPage{
 				Enum: e,
 			},
@@ -204,7 +202,7 @@ func renderSchemaPages(
 
 		err = renderPage(policyDir, localTpl, "schema_policy.html", Page{
 			Title: "HTML Policy: " + p.Name,
-			Menu:  schemaMenu,
+			Menu:  markActive(menu, "/schemas/policies/"+p.Name),
 			Contents: SchemaPolicyPage{
 				Policy: p,
 			},

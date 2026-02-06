@@ -482,7 +482,7 @@ img[src*="/icons/"] {
   transition: transform var(--transition-fast);
 }
 
-.nav-parent.expanded .nav-chevron {
+.nav-parent.expanded > .nav-item > .nav-chevron {
   transform: rotate(90deg);
 }
 
@@ -493,7 +493,7 @@ img[src*="/icons/"] {
   display: none;
 }
 
-.nav-parent.expanded .nav-sub {
+.nav-parent.expanded > .nav-sub {
   display: block;
 }
 

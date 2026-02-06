@@ -229,17 +229,23 @@ func Generate(
 			HRef:  "/schemas",
 		})
 
+		docTypesItem := MenuItem{
+			Title: "Document Types",
+		}
+
 		for _, d := range schemaDoc.Documents {
 			name := d.Name
 			if name == "" {
 				name = d.Type
 			}
 
-			schemaMenuItem.Children = append(schemaMenuItem.Children, MenuItem{
+			docTypesItem.Children = append(docTypesItem.Children, MenuItem{
 				Title: name,
 				HRef:  fmt.Sprintf("/schemas/documents/%s", d.Type),
 			})
 		}
+
+		schemaMenuItem.Children = append(schemaMenuItem.Children, docTypesItem)
 
 		apiMenu = append(apiMenu, schemaMenuItem)
 	}

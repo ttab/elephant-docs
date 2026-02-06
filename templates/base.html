@@ -70,9 +70,27 @@
             </a>
             <ul class="nav-sub">
               {{ range .Children }}
+              {{ if .Children }}
+              <li class="nav-parent" onclick="toggleNavParent(event)">
+                <a href="{{if .HRef}}{{abs_url .HRef}}{{else}}#{{end}}" class="nav-item">
+                  {{.Title}}
+                  <span class="nav-chevron">
+                    <img src="{{base_path}}/assets/icons/chevron-right.svg" width="12" height="12" alt="">
+                  </span>
+                </a>
+                <ul class="nav-sub">
+                  {{ range .Children }}
+                  <li>
+                    <a href="{{abs_url .HRef}}" class="nav-item {{if .Active}}active{{end}}">{{.Title}}</a>
+                  </li>
+                  {{ end }}
+                </ul>
+              </li>
+              {{ else }}
               <li>
                 <a href="{{abs_url .HRef}}" class="nav-item {{if .Active}}active{{end}}">{{.Title}}</a>
               </li>
+              {{ end }}
               {{ end }}
             </ul>
           </li>
@@ -151,33 +169,62 @@
       const target = event.currentTarget;
       const clickedElement = event.target;
 
-      // If clicking on a child nav item (in nav-sub), don't prevent it
-      const clickedNavItem = clickedElement.closest('.nav-item');
-      if (clickedNavItem && clickedNavItem.closest('.nav-sub')) {
-        // This is a child link, let it navigate
-        if (window.innerWidth < 1024) {
-          setTimeout(() => toggleMobileNav(), 100);
-        }
+      // Stop propagation so parent nav-parents don't also fire.
+      event.stopPropagation();
+
+      // The direct toggle area is this nav-parent's own > .nav-item link
+      // (which contains the title and chevron). Clicks in the .nav-sub
+      // are either child links or nested nav-parents.
+      const directNavItem = target.querySelector(':scope > .nav-item');
+      if (directNavItem && directNavItem.contains(clickedElement)) {
+        // Click was on this parent's own header - toggle it.
+        event.preventDefault();
+        target.classList.toggle('expanded');
         return;
       }
 
-      // If clicking the chevron or parent nav item, toggle expansion
-      const isChevron = clickedElement.closest('.nav-chevron');
-      const isParentLink = clickedElement.closest('.nav-item') && !clickedElement.closest('.nav-sub');
-
-      if (isChevron || (isParentLink && target.classList.contains('nav-parent'))) {
-        event.preventDefault();
-        target.classList.toggle('expanded');
+      // Otherwise the click is on a child link inside nav-sub - let it navigate.
+      if (window.innerWidth < 1024) {
+        setTimeout(() => toggleMobileNav(), 100);
       }
     }
 
-    // Auto-expand active nav items
-    document.querySelectorAll('.nav-item.active').forEach(item => {
-      const parent = item.closest('.nav-parent');
-      if (parent) {
-        parent.classList.add('expanded');
+    // Auto-expand nav parents that contain the active item or whose
+    // href prefix-matches the current path.
+    (function() {
+      const path = window.location.pathname;
+
+      // First, expand ancestors of any active item.
+      document.querySelectorAll('.nav-item.active').forEach(item => {
+        let el = item.closest('.nav-parent');
+        while (el) {
+          el.classList.add('expanded');
+          el = el.parentElement.closest('.nav-parent');
+        }
+      });
+
+      // Then, expand the best prefix-matching ancestor chain.
+      // This handles pages that aren't direct nav items (e.g. set detail pages).
+      // We check ALL nav-items (not just parent headers) so that e.g. the
+      // "Overview" link at /schemas matches /schemas/core/ and expands the
+      // "Schemas" parent even though it has href="#".
+      let bestMatch = null;
+      let bestLen = 0;
+      document.querySelectorAll('.nav-item').forEach(item => {
+        const href = item.getAttribute('href');
+        if (href && href !== '#' && path.startsWith(href) && href.length > bestLen) {
+          bestLen = href.length;
+          bestMatch = item;
+        }
+      });
+      if (bestMatch) {
+        let el = bestMatch.closest('.nav-parent');
+        while (el) {
+          el.classList.add('expanded');
+          el = el.parentElement.closest('.nav-parent');
+        }
       }
-    });
+    })();
 
     // Header scroll effect
     let lastScroll = 0;
