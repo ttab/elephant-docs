@@ -257,6 +257,54 @@ func Generate(
 
 		schemaMenuItem.Children = append(schemaMenuItem.Children, docTypesItem)
 
+		for _, kindInfo := range []struct {
+			kind  string
+			title string
+		}{
+			{"meta", "Meta Blocks"},
+			{"link", "Link Blocks"},
+			{"content", "Content Blocks"},
+		} {
+			kindItem := MenuItem{
+				Title: kindInfo.title,
+			}
+
+			for _, b := range schemaDoc.Blocks {
+				if b.Kind != kindInfo.kind {
+					continue
+				}
+
+				name := b.Block.Name
+				if name == "" {
+					name = b.ID
+				}
+
+				kindItem.Children = append(kindItem.Children, MenuItem{
+					Title: name,
+					HRef:  fmt.Sprintf("/schemas/blocks/%s/%s", b.Kind, SchemaSlug(b.ID)),
+				})
+			}
+
+			if len(kindItem.Children) > 0 {
+				schemaMenuItem.Children = append(schemaMenuItem.Children, kindItem)
+			}
+		}
+
+		if len(schemaDoc.Policies) > 0 {
+			policiesItem := MenuItem{
+				Title: "HTML Policies",
+			}
+
+			for _, p := range schemaDoc.Policies {
+				policiesItem.Children = append(policiesItem.Children, MenuItem{
+					Title: p.Name,
+					HRef:  fmt.Sprintf("/schemas/policies/%s", p.Name),
+				})
+			}
+
+			schemaMenuItem.Children = append(schemaMenuItem.Children, policiesItem)
+		}
+
 		apiMenu = append(apiMenu, schemaMenuItem)
 	}
 
