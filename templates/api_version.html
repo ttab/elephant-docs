@@ -225,61 +225,18 @@
 {{- end }}
 {{- end }}
 
-<!-- Navigation Helper Modal -->
-<div id="nav-helper-modal" class="nav-helper-modal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="nav-helper-title">
-  <div class="nav-helper-overlay" onclick="closeNavigator()"></div>
-  <div class="nav-helper-content">
-    <div class="nav-helper-header">
-      <h3 id="nav-helper-title">Navigate to...</h3>
-      <button onclick="closeNavigator()" class="nav-helper-close" aria-label="Close">
-        <img src="{{base_path}}/assets/icons/close.svg" width="20" height="20" alt="">
-      </button>
-    </div>
-    <div class="nav-helper-search">
-      <img src="{{base_path}}/assets/icons/search.svg" width="18" height="18" alt="">
-      <input
-        type="text"
-        id="nav-helper-input"
-        placeholder="Type to filter..."
-        autocomplete="off"
-        aria-label="Filter navigation items"
-        onkeyup="handleFilterKeyup(event)"
-        onkeydown="handleNavigatorKeydown(event)"
-      />
-    </div>
-    <div class="nav-helper-results" id="nav-helper-results" role="listbox">
-      <!-- Results will be populated by JavaScript -->
-    </div>
-  </div>
-</div>
-
-<!-- Floating Action Buttons -->
-<div class="floating-actions">
-  <button id="back-to-top" onclick="scrollToTop()" class="fab" aria-label="Back to top" title="Back to top" style="display: none;">
-    <img src="{{base_path}}/assets/icons/arrow-up.svg" width="20" height="20" alt="">
-  </button>
-  <button onclick="openNavigator()" class="fab" aria-label="Open navigation helper" title="Navigate (Ctrl+K)">
-    <img src="{{base_path}}/assets/icons/search.svg" width="20" height="20" alt="">
-  </button>
-</div>
-
 <script>
-  // Navigation data
-  const navData = [
+  window.navData = [
     {{- range .Contents.Data.Declarations }}
     {{- range .Services }}
     {{- $service := . }}
     {
-      type: 'service',
-      name: '{{.Name}}',
       label: '{{.Name}}',
       category: 'Service',
       href: '#service-{{.Name}}'
     },
     {{- range .Methods }}
     {
-      type: 'method',
-      name: '{{.Name}}',
       label: '{{$service.Name}}.{{.Name}}',
       category: 'Method',
       href: '#method-{{$service.Name}}.{{.Name}}'
@@ -288,8 +245,6 @@
     {{- end }}
     {{- range .Messages }}
     {
-      type: 'message',
-      name: '{{.Name}}',
       label: '{{.Name}}',
       category: 'Message',
       href: '#message-{{.Name}}'
@@ -297,202 +252,14 @@
     {{- end }}
     {{- range .Enums }}
     {
-      type: 'enum',
-      name: '{{.Name}}',
       label: '{{.Name}}',
       category: 'Enum',
       href: '#enum-{{.Name}}'
     },
     {{- end }}
     {{- end }}
-  ].filter(item => item); // Remove any undefined items
-
-  let selectedIndex = -1;
-
-  function scrollToTop() {
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    });
-  }
-
-  function openNavigator() {
-    const modal = document.getElementById('nav-helper-modal');
-    const input = document.getElementById('nav-helper-input');
-
-    // Prevent body scroll
-    document.body.style.overflow = 'hidden';
-
-    modal.style.display = 'flex';
-    setTimeout(() => {
-      input.focus();
-      filterNavigator();
-    }, 50);
-  }
-
-  function closeNavigator() {
-    const modal = document.getElementById('nav-helper-modal');
-
-    // Restore body scroll
-    document.body.style.overflow = '';
-
-    modal.style.display = 'none';
-    selectedIndex = -1;
-  }
-
-  function handleFilterKeyup(event) {
-    // Don't filter on navigation keys
-    const navKeys = ['ArrowDown', 'ArrowUp', 'Enter', 'Escape'];
-    if (!navKeys.includes(event.key)) {
-      filterNavigator();
-    }
-  }
-
-  function filterNavigator() {
-    const input = document.getElementById('nav-helper-input');
-    const results = document.getElementById('nav-helper-results');
-    const query = input.value.toLowerCase().trim();
-
-    // Split query by spaces to use as wildcards
-    const queryParts = query.split(/\s+/).filter(part => part.length > 0);
-
-    const filtered = navData.filter(item => {
-      const searchText = (item.label + ' ' + item.category).toLowerCase();
-      // All query parts must match
-      return queryParts.every(part => searchText.includes(part));
-    });
-
-    if (filtered.length === 0) {
-      results.innerHTML = '<div class="nav-helper-empty">No results found</div>';
-      selectedIndex = -1;
-      return;
-    }
-
-    results.innerHTML = filtered.map((item, index) => `
-      <a
-        href="${item.href}"
-        class="nav-helper-item ${index === 0 ? 'selected' : ''}"
-        data-index="${index}"
-        role="option"
-        aria-selected="${index === 0 ? 'true' : 'false'}"
-        onclick="closeNavigator()"
-      >
-        <span class="nav-helper-category">${item.category}</span>
-        <span class="nav-helper-name">${item.label}</span>
-      </a>
-    `).join('');
-
-    selectedIndex = 0;
-  }
-
-  function handleNavigatorKeydown(event) {
-    const results = document.getElementById('nav-helper-results');
-    const items = results.querySelectorAll('.nav-helper-item');
-
-    if (items.length === 0) return;
-
-    switch(event.key) {
-      case 'ArrowDown':
-        event.preventDefault();
-        selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
-        updateSelection(items);
-        scrollToSelected();
-        break;
-
-      case 'ArrowUp':
-        event.preventDefault();
-        selectedIndex = Math.max(selectedIndex - 1, 0);
-        updateSelection(items);
-        scrollToSelected();
-        break;
-
-      case 'Enter':
-        event.preventDefault();
-        if (selectedIndex >= 0 && items[selectedIndex]) {
-          items[selectedIndex].click();
-        }
-        break;
-
-      case 'Escape':
-        event.preventDefault();
-        closeNavigator();
-        break;
-    }
-  }
-
-  function updateSelection(items) {
-    items.forEach((item, index) => {
-      if (index === selectedIndex) {
-        item.classList.add('selected');
-        item.setAttribute('aria-selected', 'true');
-      } else {
-        item.classList.remove('selected');
-        item.setAttribute('aria-selected', 'false');
-      }
-    });
-  }
-
-  function scrollToSelected() {
-    const results = document.getElementById('nav-helper-results');
-    const selected = results.querySelector('.nav-helper-item.selected');
-
-    if (selected) {
-      const resultsRect = results.getBoundingClientRect();
-      const selectedRect = selected.getBoundingClientRect();
-
-      if (selectedRect.bottom > resultsRect.bottom) {
-        selected.scrollIntoView({ block: 'end', behavior: 'smooth' });
-      } else if (selectedRect.top < resultsRect.top) {
-        selected.scrollIntoView({ block: 'start', behavior: 'smooth' });
-      }
-    }
-  }
-
-  // Global keyboard shortcuts
-  document.addEventListener('keydown', (event) => {
-    const modal = document.getElementById('nav-helper-modal');
-
-    // Close on Escape
-    if (event.key === 'Escape' && modal.style.display === 'flex') {
-      closeNavigator();
-      return;
-    }
-
-    // Open with Ctrl+K (Windows/Linux) or Cmd+K (Mac)
-    if (event.key === 'k' && (event.ctrlKey || event.metaKey)) {
-      event.preventDefault();
-      openNavigator();
-    }
-  });
-
-  // Show/hide back-to-top button based on scroll position
-  const backToTopBtn = document.getElementById('back-to-top');
-
-  function toggleBackToTop() {
-    if (window.scrollY > window.innerHeight) {
-      backToTopBtn.style.display = 'flex';
-    } else {
-      backToTopBtn.style.display = 'none';
-    }
-  }
-
-  // Check on scroll
-  window.addEventListener('scroll', toggleBackToTop);
-
-  // Check on load
-  toggleBackToTop();
-
-  // Prevent scroll on modal overlay
-  const overlay = document.querySelector('.nav-helper-overlay');
-  if (overlay) {
-    overlay.addEventListener('wheel', (e) => {
-      e.preventDefault();
-    }, { passive: false });
-
-    overlay.addEventListener('touchmove', (e) => {
-      e.preventDefault();
-    }, { passive: false });
-  }
+  ];
 </script>
+{{template "nav_helper" .}}
 
 {{template "footer" .}}

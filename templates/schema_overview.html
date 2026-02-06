@@ -164,4 +164,48 @@
 {{- end }}
 
 {{- end }}
+
+<script>
+  window.navData = [
+    {{- with .Contents }}
+    {{- range .Documents }}
+    {
+      label: '{{if .Name}}{{.Name}}{{else}}{{.Type}}{{end}}',
+      category: 'Document',
+      href: '{{abs_url (print "/schemas/documents/" .Type "/")}}'
+    },
+    {{- end }}
+    {{- range .Blocks }}
+    {
+      label: '{{.ID}}',
+      category: 'Block ({{.Kind}})',
+      href: '{{abs_url (print "/schemas/blocks/" .Kind "/" (schema_slug .ID) "/")}}'
+    },
+    {{- end }}
+    {{- range .Enums }}
+    {
+      label: '{{if .Name}}{{.Name}}{{else}}{{.ID}}{{end}}',
+      category: 'Enum',
+      href: '{{abs_url (print "/schemas/enums/" (schema_slug .ID) "/")}}'
+    },
+    {{- end }}
+    {{- range .Policies }}
+    {
+      label: '{{.Name}}',
+      category: 'Policy',
+      href: '{{abs_url (print "/schemas/policies/" .Name "/")}}'
+    },
+    {{- end }}
+    {{- range .Sets }}
+    {
+      label: '{{.Title}}',
+      category: 'Schema Set',
+      href: '{{abs_url (print "/schemas/" .Name "/")}}'
+    },
+    {{- end }}
+    {{- end }}
+  ];
+</script>
+{{template "nav_helper" .}}
+
 {{template "footer" .}}
