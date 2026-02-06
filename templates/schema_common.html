@@ -43,7 +43,7 @@
 {{- if .Const }}<span class="constraint-tag tag-const">= "{{deref_string .Const}}"</span>{{ end -}}
 {{- if .Pattern }}<span class="constraint-tag tag-pattern">pattern</span>{{ end -}}
 {{- if .Glob }}<span class="constraint-tag tag-glob">glob</span>{{ end -}}
-{{- if .Enum }}{{- range .Enum }}<span class="constraint-tag tag-enum">{{.}}</span>{{ end -}}{{ end -}}
+{{- if .Enum }}<span class="constraint-tag tag-enum">enum: {{- range $i, $v := .Enum }}{{if $i}},{{end}} {{$v}}{{- end }}</span>{{ end -}}
 {{- if .EnumRef }}<a href="{{abs_url (print "/schemas/enums/" (schema_slug .EnumRef) "/")}}" class="constraint-tag tag-enum-ref">enum: {{.EnumRef}}</a>{{ end -}}
 {{- if and .HTMLPolicy (ne (printf "%s" .Format) "html") }}<a href="{{abs_url (print "/schemas/policies/" .HTMLPolicy "/")}}" class="constraint-tag tag-policy">policy: {{.HTMLPolicy}}</a>{{ end -}}
 {{- if .Geometry }}<span class="constraint-tag tag-format">geometry: {{.Geometry}}</span>{{ end -}}
