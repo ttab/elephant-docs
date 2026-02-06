@@ -1,6 +1,7 @@
 package elephantdocs
 
 import (
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"os"
@@ -280,6 +281,17 @@ func schemaTemplateFuncs() template.FuncMap {
 			return ""
 		},
 		"match_doc_type": matchDocType,
+		"glob_patterns": func(gl revisor.GlobList) string {
+			var patterns []string
+			for _, g := range gl {
+				b, _ := g.MarshalJSON()
+				var s string
+				if json.Unmarshal(b, &s) == nil {
+					patterns = append(patterns, s)
+				}
+			}
+			return strings.Join(patterns, ", ")
+		},
 	}
 }
 
