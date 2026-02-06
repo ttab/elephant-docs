@@ -1,7 +1,19 @@
 package elephantdocs
 
 type Config struct {
-	Modules []ModuleConfig `json:"modules"`
+	Modules []ModuleConfig     `json:"modules"`
+	Schemas *SchemaGroupConfig `json:"schemas,omitempty"`
+}
+
+type SchemaGroupConfig struct {
+	Title string            `json:"title"`
+	Sets  []SchemaSetConfig `json:"sets"`
+}
+
+type SchemaSetConfig struct {
+	Name  string `json:"name"`
+	Title string `json:"title"`
+	File  string `json:"file"`
 }
 
 type ModuleConfig struct {

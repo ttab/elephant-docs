@@ -1,0 +1,227 @@
+{{template "header" .}}
+{{- with .Contents }}
+{{- $doc := .Document }}
+
+<!-- Page Header -->
+<div class="page-header">
+  <div class="page-title">
+    <h1>{{if $doc.Name}}{{$doc.Name}}{{else}}{{$doc.Type}}{{end}}</h1>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem;">
+    <code style="font-size: 1.1rem; background: var(--color-bg-code); padding: 0.25rem 0.75rem; border-radius: var(--radius-md);">{{$doc.Type}}</code>
+    {{- if $doc.DeclaredIn }}
+    {{ template "schema_badge" $doc.DeclaredIn }}
+    {{- end }}
+    {{- range $doc.ExtendedBy }}
+    {{ template "schema_badge" . }}
+    {{- end }}
+  </div>
+
+  {{- if $doc.Description }}
+  <p style="color: var(--color-text-muted); font-size: 1.1rem;">{{$doc.Description}}</p>
+  {{- end }}
+
+  {{ template "deprecation_notice" $doc.Deprecated }}
+</div>
+
+{{- if $doc.Attributes.Keys }}
+<!-- Attributes Section -->
+<h2 class="section-header">Attributes</h2>
+<div class="card">
+  {{ template "constraint_map_table" $doc.Attributes }}
+</div>
+{{- end }}
+
+{{- if $doc.Meta }}
+<!-- Meta Blocks Section -->
+<h2 class="section-header" id="meta-section">Meta Blocks</h2>
+{{- range $doc.Meta }}
+<div class="card">
+  {{ template "resolved_block" . }}
+</div>
+{{- end }}
+{{- end }}
+
+{{- if $doc.Links }}
+<!-- Link Blocks Section -->
+<h2 class="section-header" id="links-section">Link Blocks</h2>
+{{- range $doc.Links }}
+<div class="card">
+  {{ template "resolved_block" . }}
+</div>
+{{- end }}
+{{- end }}
+
+{{- if $doc.Content }}
+<!-- Content Blocks Section -->
+<h2 class="section-header" id="content-section">Content Blocks</h2>
+{{- range $doc.Content }}
+<div class="card">
+  {{ template "resolved_block" . }}
+</div>
+{{- end }}
+{{- end }}
+
+{{- end }}
+
+<!-- Navigation Helper Modal -->
+<div id="nav-helper-modal" class="nav-helper-modal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="nav-helper-title">
+  <div class="nav-helper-overlay" onclick="closeNavigator()"></div>
+  <div class="nav-helper-content">
+    <div class="nav-helper-header">
+      <h3 id="nav-helper-title">Navigate to...</h3>
+      <button onclick="closeNavigator()" class="nav-helper-close" aria-label="Close">
+        <img src="{{base_path}}/assets/icons/close.svg" width="20" height="20" alt="">
+      </button>
+    </div>
+    <div class="nav-helper-search">
+      <img src="{{base_path}}/assets/icons/search.svg" width="18" height="18" alt="">
+      <input
+        type="text"
+        id="nav-helper-input"
+        placeholder="Type to filter..."
+        autocomplete="off"
+        aria-label="Filter navigation items"
+        onkeyup="handleFilterKeyup(event)"
+        onkeydown="handleNavigatorKeydown(event)"
+      />
+    </div>
+    <div class="nav-helper-results" id="nav-helper-results" role="listbox">
+    </div>
+  </div>
+</div>
+
+<!-- Floating Action Buttons -->
+<div class="floating-actions">
+  <button id="back-to-top" onclick="scrollToTop()" class="fab" aria-label="Back to top" title="Back to top" style="display: none;">
+    <img src="{{base_path}}/assets/icons/arrow-up.svg" width="20" height="20" alt="">
+  </button>
+  <button onclick="openNavigator()" class="fab" aria-label="Open navigation helper" title="Navigate (Ctrl+K)">
+    <img src="{{base_path}}/assets/icons/search.svg" width="20" height="20" alt="">
+  </button>
+</div>
+
+<script>
+  const navData = [
+    {{- with .Contents }}
+    {{- range .Document.Meta }}
+    {{- if .Block.Declares }}
+    {
+      type: 'meta',
+      name: '{{if .Block.Name}}{{.Block.Name}}{{else}}{{.Block.Declares.Type}}{{end}}',
+      label: '{{if .Block.Name}}{{.Block.Name}}{{else}}meta: {{.Block.Declares.Type}}{{end}}',
+      category: 'Meta',
+      href: '#block-{{block_anchor .Block}}'
+    },
+    {{- end }}
+    {{- end }}
+    {{- range .Document.Links }}
+    {{- if .Block.Declares }}
+    {
+      type: 'link',
+      name: '{{if .Block.Name}}{{.Block.Name}}{{else}}{{.Block.Declares.Type}}{{end}}',
+      label: '{{if .Block.Name}}{{.Block.Name}}{{else}}link: {{.Block.Declares.Type}}{{end}}',
+      category: 'Link',
+      href: '#block-{{block_anchor .Block}}'
+    },
+    {{- end }}
+    {{- end }}
+    {{- range .Document.Content }}
+    {{- if .Block.Declares }}
+    {
+      type: 'content',
+      name: '{{if .Block.Name}}{{.Block.Name}}{{else}}{{.Block.Declares.Type}}{{end}}',
+      label: '{{if .Block.Name}}{{.Block.Name}}{{else}}content: {{.Block.Declares.Type}}{{end}}',
+      category: 'Content',
+      href: '#block-{{block_anchor .Block}}'
+    },
+    {{- end }}
+    {{- end }}
+    {{- end }}
+  ].filter(item => item);
+
+  let selectedIndex = -1;
+
+  function scrollToTop() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function openNavigator() {
+    const modal = document.getElementById('nav-helper-modal');
+    const input = document.getElementById('nav-helper-input');
+    document.body.style.overflow = 'hidden';
+    modal.style.display = 'flex';
+    setTimeout(() => { input.focus(); filterNavigator(); }, 50);
+  }
+
+  function closeNavigator() {
+    const modal = document.getElementById('nav-helper-modal');
+    document.body.style.overflow = '';
+    modal.style.display = 'none';
+    selectedIndex = -1;
+  }
+
+  function handleFilterKeyup(event) {
+    const navKeys = ['ArrowDown', 'ArrowUp', 'Enter', 'Escape'];
+    if (!navKeys.includes(event.key)) { filterNavigator(); }
+  }
+
+  function filterNavigator() {
+    const input = document.getElementById('nav-helper-input');
+    const results = document.getElementById('nav-helper-results');
+    const query = input.value.toLowerCase().trim();
+    const queryParts = query.split(/\s+/).filter(part => part.length > 0);
+    const filtered = navData.filter(item => {
+      const searchText = (item.label + ' ' + item.category).toLowerCase();
+      return queryParts.every(part => searchText.includes(part));
+    });
+    if (filtered.length === 0) {
+      results.innerHTML = '<div class="nav-helper-empty">No results found</div>';
+      selectedIndex = -1;
+      return;
+    }
+    results.innerHTML = filtered.map((item, index) => `
+      <a href="${item.href}" class="nav-helper-item ${index === 0 ? 'selected' : ''}"
+         data-index="${index}" role="option" aria-selected="${index === 0}" onclick="closeNavigator()">
+        <span class="nav-helper-category">${item.category}</span>
+        <span class="nav-helper-name">${item.label}</span>
+      </a>
+    `).join('');
+    selectedIndex = 0;
+  }
+
+  function handleNavigatorKeydown(event) {
+    const results = document.getElementById('nav-helper-results');
+    const items = results.querySelectorAll('.nav-helper-item');
+    if (items.length === 0) return;
+    switch(event.key) {
+      case 'ArrowDown': event.preventDefault(); selectedIndex = Math.min(selectedIndex + 1, items.length - 1); updateSelection(items); break;
+      case 'ArrowUp': event.preventDefault(); selectedIndex = Math.max(selectedIndex - 1, 0); updateSelection(items); break;
+      case 'Enter': event.preventDefault(); if (selectedIndex >= 0 && items[selectedIndex]) items[selectedIndex].click(); break;
+      case 'Escape': event.preventDefault(); closeNavigator(); break;
+    }
+  }
+
+  function updateSelection(items) {
+    items.forEach((item, index) => {
+      item.classList.toggle('selected', index === selectedIndex);
+      item.setAttribute('aria-selected', index === selectedIndex);
+    });
+  }
+
+  document.addEventListener('keydown', (event) => {
+    const modal = document.getElementById('nav-helper-modal');
+    if (event.key === 'Escape' && modal.style.display === 'flex') { closeNavigator(); return; }
+    if (event.key === 'k' && (event.ctrlKey || event.metaKey)) { event.preventDefault(); openNavigator(); }
+  });
+
+  const backToTopBtn = document.getElementById('back-to-top');
+  function toggleBackToTop() {
+    backToTopBtn.style.display = window.scrollY > window.innerHeight ? 'flex' : 'none';
+  }
+  window.addEventListener('scroll', toggleBackToTop);
+  toggleBackToTop();
+</script>
+
+{{template "footer" .}}

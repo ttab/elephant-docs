@@ -1,0 +1,166 @@
+{{template "header" .}}
+{{- with .Contents }}
+{{- $set := .Set }}
+
+<div class="page-header">
+  <div class="page-title">
+    <h1>{{$set.Title}}</h1>
+    <span class="version-badge">{{$set.Name}}</span>
+  </div>
+  <p style="color: var(--color-text-muted);">Constraint set details</p>
+</div>
+
+{{- if $set.Set.Documents }}
+<h2 class="section-header">Documents</h2>
+
+{{- range $set.Set.Documents }}
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">
+      {{- if .Declares }}
+      <a href="{{abs_url (print "/schemas/documents/" .Declares "/")}}">{{if .Name}}{{.Name}}{{else}}{{.Declares}}{{end}}</a>
+      <span class="constraint-tag tag-type">declares: {{.Declares}}</span>
+      {{- else if .Match.Keys }}
+      {{- $docType := match_doc_type .Match }}
+      {{- if $docType }}
+      <a href="{{abs_url (print "/schemas/documents/" $docType "/")}}">extends {{$docType}}</a>
+      {{- else }}
+      <span>Match extension</span>
+      {{- end }}
+      <span class="constraint-tag tag-match">extends</span>
+      {{- end }}
+    </h3>
+  </div>
+  {{- if .Description }}
+  <p style="color: var(--color-text-muted);">{{.Description}}</p>
+  {{- end }}
+</div>
+{{- end }}
+{{- end }}
+
+{{- if $set.Set.Meta }}
+<h2 class="section-header">Meta Block Definitions</h2>
+{{- range $set.Set.Meta }}
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">
+      <a href="{{abs_url (print "/schemas/blocks/meta/" (schema_slug .ID) "/")}}">
+        <code>{{.ID}}</code>
+      </a>
+    </h3>
+  </div>
+  {{- if .Block.Name }}
+  <p style="color: var(--color-text-muted);">{{.Block.Name}}</p>
+  {{- end }}
+</div>
+{{- end }}
+{{- end }}
+
+{{- if $set.Set.Links }}
+<h2 class="section-header">Link Block Definitions</h2>
+{{- range $set.Set.Links }}
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">
+      <a href="{{abs_url (print "/schemas/blocks/link/" (schema_slug .ID) "/")}}">
+        <code>{{.ID}}</code>
+      </a>
+    </h3>
+  </div>
+  {{- if .Block.Name }}
+  <p style="color: var(--color-text-muted);">{{.Block.Name}}</p>
+  {{- end }}
+</div>
+{{- end }}
+{{- end }}
+
+{{- if $set.Set.Content }}
+<h2 class="section-header">Content Block Definitions</h2>
+{{- range $set.Set.Content }}
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">
+      <a href="{{abs_url (print "/schemas/blocks/content/" (schema_slug .ID) "/")}}">
+        <code>{{.ID}}</code>
+      </a>
+    </h3>
+  </div>
+  {{- if .Block.Name }}
+  <p style="color: var(--color-text-muted);">{{.Block.Name}}</p>
+  {{- end }}
+</div>
+{{- end }}
+{{- end }}
+
+{{- if $set.Set.Enums }}
+<h2 class="section-header">Enumerations</h2>
+{{- range $set.Set.Enums }}
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">
+      {{- if .Declare }}
+      <a href="{{abs_url (print "/schemas/enums/" (schema_slug .Declare) "/")}}">
+        <code>{{.Declare}}</code>
+      </a>
+      <span class="constraint-tag tag-type">declares</span>
+      {{- else if .Match }}
+      <a href="{{abs_url (print "/schemas/enums/" (schema_slug .Match) "/")}}">
+        <code>{{.Match}}</code>
+      </a>
+      <span class="constraint-tag tag-match">extends</span>
+      {{- end }}
+    </h3>
+  </div>
+  {{- if .Name }}
+  <p style="color: var(--color-text-muted);">{{.Name}}</p>
+  {{- end }}
+</div>
+{{- end }}
+{{- end }}
+
+{{- if $set.Set.HTMLPolicies }}
+<h2 class="section-header">HTML Policies</h2>
+{{- range $set.Set.HTMLPolicies }}
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">{{.Name}}</h3>
+  </div>
+  {{- if .Description }}
+  <p style="color: var(--color-text-muted);">{{.Description}}</p>
+  {{- end }}
+  {{- if .Uses }}
+  <p><span class="constraint-tag">uses: {{.Uses}}</span></p>
+  {{- end }}
+  {{- if .Extends }}
+  <p><span class="constraint-tag">extends: {{.Extends}}</span></p>
+  {{- end }}
+  {{- if .Elements }}
+  <div class="table-wrapper schema-field-table">
+    <table>
+      <thead>
+        <tr>
+          <th>Element</th>
+          <th>Attributes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{- range $el, $def := .Elements }}
+        <tr>
+          <td data-label="Element"><code>&lt;{{$el}}&gt;</code></td>
+          <td data-label="Attributes">
+            {{- range $def.Attributes.Keys }}
+            <code>{{.}}</code>
+            {{- end }}
+          </td>
+        </tr>
+        {{- end }}
+      </tbody>
+    </table>
+  </div>
+  {{- end }}
+</div>
+{{- end }}
+{{- end }}
+
+{{- end }}
+{{template "footer" .}}

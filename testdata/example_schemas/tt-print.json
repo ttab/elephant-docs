@@ -1,0 +1,654 @@
+{
+  "version": 1,
+  "name": "tt-print",
+  "documents": [
+    {
+      "name": "Print article",
+      "description": "Print content",
+      "declares": "tt/print-article",
+      "content": [
+        {"ref": "tt://print-text"},
+        {"ref": "tt://tv-listing"},
+        {"ref": "tt://visual"},
+        {"ref": "core://text"},
+        {"ref": "core://image"},
+        {"ref": "core://unordered-list"},
+        {"ref": "core://ordered-list"},
+        {"ref": "core://factbox"}
+      ],
+      "meta": [
+        {"ref": "tt://print-article"},
+        {"ref": "core://note"}
+      ],
+      "links": [
+        {"ref": "core://article-source"},
+        {"ref": "tt://print-article-source"},
+        {"ref": "core://byline"},
+        {"ref": "core://section"},
+        {"ref": "core://assignment"},
+        {"ref": "tt://print-article/flow"}
+      ]
+    },
+    {
+      "name": "Print layout",
+      "declares": "tt/print-layout",
+      "meta": [
+        {"ref": "tt://print-constant"},
+        {"ref": "tt://print-charstyle"},
+        {"ref": "tt://print-content-format"},
+        {"ref": "tt://print-text-block-renderer"}
+      ],
+      "content": [
+        {
+          "name": "Print slot",
+          "description": "A slot for rendering an article/print content",
+          "declares": {"type": "tt/print-slot"},
+          "attributes": {
+            "name": {}
+          },
+          "meta": [
+            {"ref": "tt://print-flow/features"}
+          ],
+          "content": [
+            {"ref": "tt://print-frame"}
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Print flow",
+      "declares": "tt/print-flow",
+      "attributes": {
+        "title": {},
+        "uri": {"glob":["tt://print-flow/*"]}
+      },
+      "meta": [
+        {
+          "ref": "tt:/print-flow/layouts",
+          "count": 1
+        }
+      ],
+      "content": [
+        {
+          "ref": "tt:/print-flow/content",
+          "minCount": 1
+        }
+      ]
+    },
+    {
+      "name": "TV channel",
+      "declares": "tt/tv-channel",
+      "attributes": {
+        "title": {
+          "description": "Human readable channel name"
+        },
+        "uri": {"glob":["tt://tv-channel/*"]}
+      },
+      "meta": [
+        {
+          "name": "Channel metadata",
+          "description": "Metadata for TV channels",
+          "declares": {"type":"tt/tv-channel"},
+          "attributes": {
+            "name": {
+              "description": "Machine readable channel name"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "links": [
+    {
+      "id": "tt://print-article/flow",
+      "block": {
+        "name": "Article flow",
+        "declares": {"rel": "flow", "type": "tt/print-flow"},
+        "attributes": {
+          "uuid": {},
+          "title": {
+            "labels": ["sortable"]
+          }
+        }
+      }
+    },
+    {
+      "id": "tt://print-article-source",
+      "block": {
+        "name": "Print article source",
+        "description": "Points to the original print article if this one is a copy",
+        "declares": {"type": "tt/print-article", "rel":"source"},
+        "attributes": {
+          "uuid": {}
+        },
+        "data": {
+          "version": {
+            "format": "int",
+            "optional": true,
+            "description": "The version of the original article when it was copied"
+          }
+        }
+      }
+    }
+  ],
+  "meta": [
+    {
+      "id": "tt://print-article",
+      "block": {
+        "name": "Print article meta",
+        "description": "Metadata for print articles",
+        "declares": {"type":"tt/print-article"},
+        "attributes": {
+          "title": {
+            "description": "The title of the print article, modified for variants"
+          },
+          "name": {
+            "description": "The flow article that this print article is based on"
+          }
+        },
+        "data": {
+          "date": {
+            "time": "2006-01-02",
+            "description": "The date the article has been instantiated on"
+          },
+          "flow_position": {
+            "format": "int",
+            "optional": true,
+            "description": "Position of the article in the print flow."
+          }
+        },
+        "meta": [
+          {"ref": "tt://print-content/article-layout"}
+        ]
+      }
+    },
+    {
+      "id": "tt://print-content/article-layout",
+      "block": {
+        "name": "Article layout",
+        "description": "The specific article layout and settings that should be used",
+        "declares": {"type": "tt/article-layout"},
+        "attributes": {
+          "name": {},
+          "id": {
+            "description": "ID used to reference the layout, must be locally unique."
+          }
+        },
+        "data": {
+          "position": {
+            "optional": true
+          },
+          "text_export": {
+            "optional": true,
+            "format": "bool"
+          },
+          "status": {
+            "description": "A status describing if the layout currently renders correctly.",
+            "optional": true,
+            "labels": ["keyword"]
+          }
+        },
+        "meta": [
+          {"ref": "tt://print-flow/features"}
+        ],
+        "links": [
+          {
+            "name": "Layout",
+            "declares": {"rel": "layout"},
+            "maxCount": 1,
+            "attributes": {
+              "name": {},
+              "uuid": {},
+              "uri": {},
+              "title": {
+                "optional": true
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "tt://print-text-block-renderer",
+      "block": {
+        "declares": {"type": "tt/text-block-renderer"},
+        "attributes": {
+          "name": {}
+        },
+        "data": {
+          "type": {},
+          "role": {}
+        }
+      }
+    },
+    {
+      "id": "tt://print-constant",
+      "block": {
+        "name": "Constant",
+        "description": "A value to use when rendering the content",
+        "declares": {"type":"tt/print-constant"},
+        "attributes": {
+          "name": {},
+          "value": {}
+        }
+      }
+    },
+    {
+      "id": "tt://print-charstyle",
+      "block": {
+        "name": "Character style",
+        "description": "Character style to map inline elements to",
+        "declares": {"type":"tt/print-charstyle"},
+        "attributes": {
+          "name": {
+            "name": "Tag"
+          },
+          "value": {
+            "name": "Style"
+          }
+        }
+      }
+    },
+    {
+      "id": "tt:/print-flow/layouts",
+      "block": {
+        "name": "Print flow layouts",
+        "description": "The customer layouts that are part of the print flow",
+        "declares": {"type": "tt/print-layouts"},
+        "links": [
+          {
+            "name": "Layout",
+            "declares": {"rel": "layout"},
+            "minCount": 1,
+            "attributes": {
+              "name": {},
+              "title": {},
+              "uuid": {},
+              "uri": {}
+            },
+            "links": [
+              {
+                "declares": {"rel": "position"},
+                "attributes": {
+                  "name": {},
+                  "value": {}
+                },
+                "data": {
+                  "page": {
+                    "format": "int"
+                  },
+                  "x": {
+                    "format": "float"
+                  },
+                  "y": {
+                    "format": "float"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "tt://print-flow/features",
+      "block": {
+        "name": "Print features",
+        "declares": {"type": "tt/print-features"},
+        "content": [
+          {
+            "name": "Print feature",
+            "declares": {"type": "tt/print-feature"},
+            "attributes": {
+              "name": {},
+              "value": {
+                "format": "bool"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "tt://print-content-format",
+      "block": {
+        "name": "Content format",
+        "description": "Format rules to use for paragraph and character styles.",
+        "declares": {"type":"tt/print-content-format"},
+        "attributes": {
+          "name": {
+            "description": "Name of the format"
+          }
+        },
+        "content": [
+          {
+            "name": "Paragraph style",
+            "declares": {"type":"tt/paragraph"},
+            "attributes": {
+              "role": {
+                "description": "Core text block role to match against",
+                "optional": true
+              }
+            },
+            "data": {
+              "style": {
+                "name": "Style name"
+              },
+              "rule": {
+                "description": "Rule that must evaluate to true for the style to be applied",
+                "optional": true
+              },
+              "inline": {
+                "description": "Selector for another block to inline into this one",
+                "optional": true
+              },
+              "inline_style": {
+                "description": "Character style to use for the inlined content",
+                "optional": true
+              },
+              "inline_template": {
+                "description": "Template to use for the inlined content",
+                "optional": true
+              },
+              "template": {
+                "description": "Template to use when rendering paragraph content",
+                "optional": true
+              }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "content": [
+    {
+      "id": "tt:/print-flow/content",
+      "block": {
+        "name": "Print flow content",
+        "description": "Definition for a piece of content that is part of a print flow",
+        "declares": {"type": "tt/print-content"},
+        "attributes": {
+          "name": {},
+          "title": {}
+        },
+        "meta": [
+          {"ref": "tt://print-flow/features"}
+        ],
+        "content": [
+          {"ref": "tt://print-flow/content-layout"}
+        ]
+      }
+    },
+    {
+      "id": "tt://print-flow/content-layout",
+      "block": {
+        "name": "Content layout",
+        "description": "The specific article layout and settings that should be used",
+        "declares": {"type": "tt/content-layout"},
+        "data": {
+          "layout": {},
+          "article_layout": {},
+          "position": {
+            "optional": true
+          },
+          "text_export": {
+            "optional": true,
+            "format": "bool"
+          }
+        },
+        "meta": [
+          {"ref": "tt://print-flow/features"}
+        ],
+        "links": [
+          {
+            "name": "Layout",
+            "declares": {"rel": "layout"},
+            "maxCount": 1,
+            "attributes": {
+              "name": {},
+              "uuid": {},
+              "uri": {}
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "tt://print-text",
+      "block": {
+        "description": "A print text block",
+        "declares": {"type":"tt/print-text"},
+        "attributes": {
+          "role": {
+            "optional":true
+          }
+        },
+        "data": {
+          "text":{
+            "allowEmpty":true,
+            "format": "html"
+          }
+        }
+      }
+    },
+    {
+      "id": "tt://tv-listing",
+      "block": {
+        "description": "Block that describes the details for a TV listing",
+        "declares": {"type":"tt/tv-listing"},
+        "data": {
+          "channel":{"optional": true},
+          "day":{"optional": true},
+          "time":{"optional": true},
+          "title":{"optional": true},
+          "end_time":{"optional": true}
+        },
+        "links": [
+          {
+            "declares": {"rel":"channel"},
+            "maxCount": 1,
+            "attributes": {
+              "uri": {}
+            }
+          },
+          {
+            "declares": {"rel":"self"},
+            "maxCount": 1,
+            "attributes": {
+              "uri": {}
+            },
+            "deprecated": {
+              "label": "listing-self",
+              "doc": "Do not use"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "tt://print-frame",
+      "block": {
+        "description": "Configuration for a print frame",
+        "declares": {"type":"tt/print-frame"},
+        "attributes": {
+          "role": {
+            "optional": true
+          },
+          "name": {
+            "name": "Scribus frame name"
+          }
+        },
+        "data": {
+          "template": {
+            "optional": true
+          }
+        },
+        "links": [
+          {
+            "name": "Content allocation",
+            "description": "Allows different frames to refer to the same piece of content.",
+            "declares": {"rel":"allocation"},
+            "attributes": {
+              "name": {
+                "description": "Logical name for the content"
+              }
+            }
+          },
+          {
+            "name": "Content format",
+            "description": "Format rules to use for paragraph and character styles",
+            "declares": {"rel": "content-format"},
+            "attributes": {
+              "name": {}
+            }
+          },
+          {
+            "name": "Follow rule",
+            "description": "Allows a frame to be repositioned or resized based on another frame.",
+            "declares": {"type": "tt/follow-rule"},
+            "attributes": {
+              "name": {
+                "name": "Name of frame to follow"
+              },
+              "rel": {
+                "name": "Follow method",
+                "enumReference": "tt://print/follow-rels"
+              }
+            },
+            "data": {
+              "snap": {
+                "name": "Snap to baseline",
+                "optional": true,
+                "enum": ["nearest", "up", "down"]
+              }
+            }
+          },
+          {
+            "name": "Image allocation",
+            "description": "Allows different image frames to refer to the same content image.",
+            "declares": {"rel":"image"},
+            "deprecated": {
+              "label": "image_allocation",
+              "doc": "Use rel=allocation instead"
+            },
+            "attributes": {
+              "name": {}
+            }
+          }
+        ],
+        "meta": [
+          {
+            "name": "Kerning options",
+            "description": "Control automatic kerning, scaling and word spacing",
+            "declares": {"type":"tt/kerning"},
+            "data": {
+              "disabled": {
+                "description": "Disable automatic kerning, defaults to false.",
+                "format": "bool",
+                "optional": true
+              },
+              "max": {
+                "description": "Max increase in percent, precision up to 0.01, defaults to 5",
+                "format": "float",
+                "optional": true
+              },
+              "min": {
+                "description": "Max decrease in percent, precision up to 0.01, defaults to 5",
+                "format": "float",
+                "optional": true
+              },
+              "increment": {
+                "description": "Change increment in percent, precision up to 0.01, defaults to 0.25",
+                "format": "float",
+                "optional": true
+              }
+            }
+          },
+          {
+            "name": "Content align",
+            "description": "Control content alignment in a frame, used for fitted images",
+            "declares": {"type":"tt/align"},
+            "data": {
+              "horizontal": {
+                "optional": true,
+                "enum": ["left", "center", "right"]
+              },
+              "vertical": {
+                "optional": true,
+                "enum": ["top", "middle", "bottom"]
+              },
+              "fit_to_content": {
+                "description": "Resize and move the content to fit the content.",
+                "optional": true,
+                "format": "bool"
+              }
+            }
+          },
+          {
+            "name": "Vertical grow rule",
+            "description": "Allows a text frame to grow (or shrink) based on its contents.",
+            "declares": {"type":"tt/grow-height"},
+            "data": {
+              "increment": {
+                "description": "Increments in which to grow or shrink, usually the line height, f.ex. '11pt'.",
+                "optional": true
+              },
+              "max_steps": {
+                "description": "Max steps to grow",
+                "format": "int",
+                "optional": true
+              },
+              "direction": {
+                "description": "Direction to grow, defaults to 'down'",
+                "enum": ["up", "down"],
+                "optional": true
+              },
+              "shrink": {
+                "description": "Whether the frame is allowed to shrink, defaults to false.",
+                "format": "bool",
+                "optional": true
+              }
+            }
+          },
+          {
+            "name": "Horizontal grow rule",
+            "description": "Allows a text frame to grow (or shrink) based on its contents.",
+            "declares": {"type":"tt/grow-width"},
+            "data": {
+              "max_width": {
+                "description": "Max width to grow to, f.ex. '10pt' or '15mm'",
+                "optional": true
+              },
+              "direction": {
+                "description": "Direction to grow, defaults to 'right'",
+                "enum": ["right", "left"],
+                "optional": true
+              },
+              "shrink": {
+                "description": "Whether the frame is allowed to shrink, defaults to false.",
+                "format": "bool",
+                "optional": true
+              }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "enums": [
+    {
+      "declare": "tt://print/follow-rels",
+      "name": "Follow relationships",
+      "values": {
+        "anchor-bottom-to-top": {},
+        "anchor-height-to-bottom": {},
+        "anchor-height-to-top": {},
+        "anchor-to-bottom": {},
+        "anchor-to-top": {},
+        "bounds": {},
+        "yield-height": {},
+        "yield-width": {}
+      }
+    }
+  ]
+}

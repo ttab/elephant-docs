@@ -1,0 +1,69 @@
+{{template "header" .}}
+{{- with .Contents }}
+{{- $enum := .Enum }}
+
+<div class="page-header">
+  <div class="page-title">
+    <h1>{{if $enum.Name}}{{$enum.Name}}{{else}}{{$enum.ID}}{{end}}</h1>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem;">
+    <code style="font-size: 1rem; background: var(--color-bg-code); padding: 0.25rem 0.75rem; border-radius: var(--radius-md);">{{$enum.ID}}</code>
+    {{- if $enum.DeclaredIn }}
+    {{ template "schema_badge" $enum.DeclaredIn }}
+    {{- end }}
+    {{- range $enum.ExtendedBy }}
+    {{ template "schema_badge" . }}
+    {{- end }}
+  </div>
+
+  {{- if $enum.Description }}
+  <p style="color: var(--color-text-muted); font-size: 1.1rem;">{{$enum.Description}}</p>
+  {{- end }}
+</div>
+
+{{- if $enum.Values }}
+<h2 class="section-header">Values</h2>
+<div class="card">
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Value</th>
+          <th>Status</th>
+          <th>Description</th>
+          <th>Source</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{- range $enum.Values }}
+        <tr>
+          <td data-label="Value">
+            <code class="{{if .Forbidden}}forbidden-value{{end}}">{{.Value}}</code>
+          </td>
+          <td data-label="Status">
+            {{- if .Forbidden }}
+            <span class="constraint-tag tag-forbidden">forbidden</span>
+            {{- else if .Deprecated }}
+            <span class="constraint-tag tag-deprecated">deprecated</span>
+            {{- else }}
+            <span class="constraint-tag tag-active">active</span>
+            {{- end }}
+          </td>
+          <td data-label="Description">
+            {{.Description}}
+            {{- if .Deprecated }}
+            {{ template "deprecation_notice" .Deprecated }}
+            {{- end }}
+          </td>
+          <td data-label="Source">{{ template "schema_badge" .Source }}</td>
+        </tr>
+        {{- end }}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{- end }}
+
+{{- end }}
+{{template "footer" .}}

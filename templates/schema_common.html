@@ -1,0 +1,177 @@
+{{/* Schema badge - shows which constraint set contributed something */}}
+{{ define "schema_badge" -}}
+<span class="schema-badge">{{.}}</span>
+{{- end }}
+
+{{/* Block signature display - takes a BlockConstraint */}}
+{{ define "block_signature" -}}
+<span class="schema-signature">
+  {{- if .Declares -}}
+    {{- if .Declares.Type }}<span class="constraint-tag tag-type">type: {{.Declares.Type}}</span>{{ end -}}
+    {{- if .Declares.Rel }} <span class="constraint-tag tag-rel">rel: {{.Declares.Rel}}</span>{{ end -}}
+    {{- if .Declares.Role }} <span class="constraint-tag tag-role">role: {{.Declares.Role}}</span>{{ end -}}
+  {{- else if .Match.Keys -}}
+    {{- range .Match.Keys -}}
+      <span class="constraint-tag tag-match">match {{.}}</span>
+    {{- end -}}
+  {{- end -}}
+</span>
+{{- end }}
+
+{{/* Count constraint display - takes a BlockConstraint */}}
+{{ define "count_constraints" -}}
+{{- if .Count }}<span class="constraint-tag tag-count">exactly {{deref_int .Count}}</span>{{ end -}}
+{{- if .MaxCount }}<span class="constraint-tag tag-count">max {{deref_int .MaxCount}}</span>{{ end -}}
+{{- if .MinCount }}<span class="constraint-tag tag-count">min {{deref_int .MinCount}}</span>{{ end -}}
+{{- end }}
+
+{{/* Deprecation notice */}}
+{{ define "deprecation_notice" -}}
+{{- if . -}}
+<div class="deprecated-notice">
+  <strong>Deprecated</strong>{{if .Label}} ({{.Label}}){{end}}{{if .Doc}}: {{.Doc}}{{end}}
+</div>
+{{- end -}}
+{{- end }}
+
+{{/* String constraint tags for a field */}}
+{{ define "field_constraint_tags" -}}
+{{- if .Optional }}<span class="constraint-tag tag-optional">optional</span>{{ end -}}
+{{- if .AllowEmpty }}<span class="constraint-tag tag-allow-empty">allow empty</span>{{ end -}}
+{{- if .Format }}<span class="constraint-tag tag-format">{{.Format}}</span>{{ end -}}
+{{- if .Time }}<span class="constraint-tag tag-format">time: {{.Time}}</span>{{ end -}}
+{{- if .Const }}<span class="constraint-tag tag-const">= "{{deref_string .Const}}"</span>{{ end -}}
+{{- if .Pattern }}<span class="constraint-tag tag-pattern">pattern</span>{{ end -}}
+{{- if .Glob }}<span class="constraint-tag tag-glob">glob</span>{{ end -}}
+{{- if .Enum }}{{- range .Enum }}<span class="constraint-tag tag-enum">{{.}}</span>{{ end -}}{{ end -}}
+{{- if .EnumRef }}<a href="{{abs_url (print "/schemas/enums/" (schema_slug .EnumRef) "/")}}" class="constraint-tag tag-enum-ref">enum: {{.EnumRef}}</a>{{ end -}}
+{{- if .HTMLPolicy }}<span class="constraint-tag tag-policy">policy: {{.HTMLPolicy}}</span>{{ end -}}
+{{- if .Geometry }}<span class="constraint-tag tag-format">geometry: {{.Geometry}}</span>{{ end -}}
+{{- if .ColourFormats }}{{- range .ColourFormats }}<span class="constraint-tag tag-format">{{.}}</span>{{ end -}}{{ end -}}
+{{- if .Labels }}{{- range .Labels }}<span class="constraint-tag tag-label">label: {{.}}</span>{{ end -}}{{ end -}}
+{{- if .Deprecated }}{{ template "deprecation_notice" .Deprecated }}{{ end -}}
+{{- end }}
+
+{{/* Constraint map table - used for attributes and data. Takes ConstraintMap */}}
+{{ define "constraint_map_table" -}}
+{{- if .Keys -}}
+<div class="table-wrapper schema-field-table">
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Constraints</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{- range .Keys }}
+      {{- $sc := index $.Constraints . }}
+      <tr>
+        <td data-label="Name">
+          <code>{{.}}</code>
+          {{- if $sc.Description }}
+          <div class="field-description">{{$sc.Description}}</div>
+          {{- end }}
+          {{- if $sc.Name }}
+          <div class="field-description">{{$sc.Name}}</div>
+          {{- end }}
+        </td>
+        <td data-label="Constraints">
+          {{ template "field_constraint_tags" $sc }}
+        </td>
+      </tr>
+      {{- end }}
+    </tbody>
+  </table>
+</div>
+{{- end -}}
+{{- end }}
+
+{{/* Render a ResolvedBlock inline */}}
+{{ define "resolved_block" -}}
+{{- $rb := . -}}
+{{- $block := .Block -}}
+<div class="schema-block-detail" {{- if $block.Declares }} id="block-{{block_anchor $block}}"{{end}}>
+  <div class="schema-block-header">
+    {{- if $block.Name }}<strong>{{$block.Name}}</strong>{{ end }}
+    {{ template "block_signature" $block }}
+    {{ template "count_constraints" $block }}
+    {{- if $rb.Source }} {{ template "schema_badge" $rb.Source }}{{ end }}
+    {{- if $rb.Ref }}
+    <a href="{{abs_url (print "/schemas/blocks/" $rb.BlockKind "/" (schema_slug $rb.Ref) "/")}}" class="block-ref-link" title="View block definition">{{$rb.Ref}}</a>
+    {{- end }}
+  </div>
+  {{- if $block.Description }}
+  <p class="schema-block-description">{{$block.Description}}</p>
+  {{- end }}
+  {{ template "deprecation_notice" $block.Deprecated }}
+  {{- if $block.Attributes.Keys }}
+  <div class="schema-subsection">
+    <h5>Attributes</h5>
+    {{ template "constraint_map_table" $block.Attributes }}
+  </div>
+  {{- end }}
+  {{- if $block.Data.Keys }}
+  <div class="schema-subsection">
+    <h5>Data</h5>
+    {{ template "constraint_map_table" $block.Data }}
+  </div>
+  {{- end }}
+  {{- if $block.Meta }}
+  <div class="schema-subsection">
+    <h5>Nested Meta</h5>
+    {{- range $block.Meta }}
+    {{ template "nested_block" . }}
+    {{- end }}
+  </div>
+  {{- end }}
+  {{- if $block.Links }}
+  <div class="schema-subsection">
+    <h5>Nested Links</h5>
+    {{- range $block.Links }}
+    {{ template "nested_block" . }}
+    {{- end }}
+  </div>
+  {{- end }}
+  {{- if $block.Content }}
+  <div class="schema-subsection">
+    <h5>Nested Content</h5>
+    {{- range $block.Content }}
+    {{ template "nested_block" . }}
+    {{- end }}
+  </div>
+  {{- end }}
+</div>
+{{- end }}
+
+{{/* Render a nested *BlockConstraint (not a ResolvedBlock) */}}
+{{ define "nested_block" -}}
+{{- $block := . -}}
+<div class="schema-block-detail nested">
+  <div class="schema-block-header">
+    {{- if .Name }}<strong>{{.Name}}</strong>{{ end }}
+    {{- if .Ref }}
+    <span class="block-ref-link">ref: {{.Ref}}</span>
+    {{- else }}
+    {{ template "block_signature" . }}
+    {{ template "count_constraints" . }}
+    {{- end }}
+  </div>
+  {{- if .Description }}
+  <p class="schema-block-description">{{.Description}}</p>
+  {{- end }}
+  {{ template "deprecation_notice" .Deprecated }}
+  {{- if .Attributes.Keys }}
+  <div class="schema-subsection">
+    <h5>Attributes</h5>
+    {{ template "constraint_map_table" .Attributes }}
+  </div>
+  {{- end }}
+  {{- if .Data.Keys }}
+  <div class="schema-subsection">
+    <h5>Data</h5>
+    {{ template "constraint_map_table" .Data }}
+  </div>
+  {{- end }}
+</div>
+{{- end }}

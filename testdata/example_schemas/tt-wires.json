@@ -1,0 +1,256 @@
+{
+  "version": 1,
+  "name": "tt-wires",
+  "documents": [
+    {
+      "name": "Wire Source",
+      "description": "A source of the content from a wire service, specifying the source from which the wire is obtained e.g. AP, Ritzau, RSS feed, etc.",
+      "declares": "tt/wire-source",
+      "attributes": {
+        "title": {},
+        "uri": {
+          "glob": [
+            "wires://source/**"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Wire Provider",
+      "description": "A provider of the content from a wire service, specifying the creator of the wire. For example, AP is the wire source and the provider can be AP itself or Business Wire etc.",
+      "declares": "tt/wire-provider",
+      "attributes": {
+        "title": {},
+        "uri": {
+          "glob": [
+            "wires://provider/**"
+          ]
+        }
+      },
+      "links": [
+        {"ref":"core://content-source/use"}
+      ]
+    },
+    {
+      "name": "Wire",
+      "description": "A newsitem from a wire service",
+      "declares": "tt/wire",
+      "links": [
+        {
+          "name": "Source",
+          "description": "A reference to the source of the content",
+          "declares": {
+            "rel": "source"
+          },
+          "count": 1,
+          "attributes": {
+            "uuid": {},
+            "uri": {
+              "glob": [
+                "wires://source/**"
+              ]
+            },
+            "title": {}
+          }
+        },
+        {
+          "name": "Provider",
+          "description": "The party that has provided the information",
+          "declares": {
+            "rel": "provider"
+          },
+          "attributes": {
+            "uuid": {},
+            "uri": {
+              "glob": [
+                "wires://provider/**"
+              ]
+            },
+            "title": {}
+          }
+        },
+        {
+          "name": "Topics",
+          "description": "Links to IPTC media topics",
+          "declares": {
+            "rel": "subject",
+            "type": "core/category"
+          },
+          "attributes": {
+            "title": {},
+            "uuid": {},
+            "uri": {}
+          }
+        },
+        {
+          "name": "Section",
+          "declares": {
+            "rel": "section",
+            "type": "core/section"
+          },
+          "maxCount": 1,
+          "attributes": {
+            "uuid": {},
+            "title": {}
+          }
+        }
+      ],
+      "meta": [
+        {
+          "name": "Wire metadata",
+          "declares": {
+            "type": "tt/wire"
+          },
+          "attributes": {
+            "role": {
+              "enum": [
+                "article",
+                "pressrelease"
+              ]
+            }
+          },
+          "data": {
+            "issued": {
+              "name": "Issued timestamp for the content",
+              "format": "RFC3339"
+            },
+            "firstCreated": {
+              "name": "First created timestamp for the content",
+              "format": "RFC3339",
+              "optional": true
+            },
+            "version": {
+              "name": "Opaque version identifier from the source"
+            },
+            "copyright": {}
+          }
+        },
+        {
+          "name": "Slug",
+          "declares": {
+            "type": "tt/slugline"
+          },
+          "attributes": {
+            "value": {}
+          }
+        },
+        {
+          "name": "Newsvalue",
+          "declares": {
+            "type": "core/newsvalue"
+          },
+          "attributes": {
+            "value": {
+              "format": "int"
+            }
+          }
+        },
+        {
+          "declares": {
+            "type": "core/note"
+          },
+          "attributes": {
+            "role": {
+              "enum": [
+                "public",
+                "internal"
+              ]
+            }
+          },
+          "data": {
+            "text": {
+              "allowEmpty": true
+            }
+          }
+        }
+      ],
+      "content": [
+        {
+          "name": "Text block",
+          "declares": {
+            "type": "core/text"
+          },
+          "attributes": {
+            "role": {
+              "enum": [
+                "heading-1",
+                "heading-2",
+                "preamble",
+                "vignette"
+              ],
+              "optional": true
+            }
+          },
+          "data": {
+            "text": {
+              "allowEmpty": true,
+              "format": "html"
+            }
+          }
+        },
+        {
+          "name": "Table",
+          "declares": {
+            "type": "core/table"
+          },
+          "data": {
+            "caption": {
+              "allowEmpty": true,
+              "optional": true
+            },
+            "thead": {
+              "format": "html",
+              "htmlPolicy": "table",
+              "optional": true
+            },
+            "tbody": {
+              "format": "html",
+              "htmlPolicy": "table"
+            },
+            "tfoot": {
+              "format": "html",
+              "htmlPolicy": "table",
+              "optional": true
+            }
+          }
+        },
+        {
+          "declares": {
+            "type": "core/ordered-list"
+          },
+          "content": [
+            {
+              "declares": {
+                "type": "core/text"
+              },
+              "data": {
+                "text": {
+                  "allowEmpty": true,
+                  "format": "html"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "declares": {
+            "type": "core/unordered-list"
+          },
+          "content": [
+            {
+              "declares": {
+                "type": "core/text"
+              },
+              "data": {
+                "text": {
+                  "allowEmpty": true,
+                  "format": "html"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

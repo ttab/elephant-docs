@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "name": "genai",
+  "documents": [
+    {
+      "name": "Generative AI prompt",
+      "description": "A document describing a prompt",
+      "declares": "core/prompt",
+      "meta": [
+        {
+          "ref": "core://genai/prompt",
+          "count": 1
+        }
+      ],
+      "links": [
+        {
+          "ref":"core://genai/model",
+          "count": 1
+        }
+      ],
+      "content": [
+        {"ref":"core://genai/prompt-text"},
+        {"ref":"core://genai/prompt-snippet"}
+      ]
+    },
+    {
+      "name": "Generative AI snippet",
+      "description": "A document describing a prompt snippet",
+      "declares": "core/prompt-snippet",
+      "content": [
+        {"ref":"core://genai/prompt-text"}
+      ]
+    }
+  ],
+  "links": [
+    {
+      "id": "core://genai/model",
+      "block": {
+        "declares": {"rel":"model"},
+        "attributes": {
+          "uri": {}
+        }
+      }
+    }
+  ],
+  "meta": [
+    {
+      "id": "core://genai/prompt",
+      "block": {
+        "declares": {"type":"core/prompt"},
+        "attributes": {
+          "role": {
+            "enum": ["document", "feedback", "text"]
+          }
+        },
+        "data": {
+          "doc_type": {
+            "description": "The document type that the prompt generates, if any.",
+            "optional":true
+          },
+          "text_format": {
+            "enum": ["plain", "html", "markdown"],
+            "optional":true
+          }
+        }
+      }
+    }
+  ],
+  "content": [
+    {
+      "id": "core://genai/prompt-text",
+      "block": {
+        "declares": {"type":"core/prompt-text"},
+        "data": {
+          "text": {"allowEmpty":true}
+        }
+      }
+    },
+    {
+      "id": "core://genai/prompt-snippet",
+      "block": {
+        "declares": {"type":"core/prompt-snippet"},
+        "attributes": {
+          "uuid": {}
+        }
+      }
+    }
+  ]
+}

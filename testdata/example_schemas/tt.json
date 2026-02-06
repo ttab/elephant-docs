@@ -1,0 +1,402 @@
+{
+  "version": 1,
+  "name": "tt",
+  "enums": [
+    {
+      "match": "core://text-roles",
+      "values": {
+        "heading-3": {"forbidden":true},
+        "heading-4": {"forbidden":true},
+        "vignette": {}
+      }
+    },
+    {
+      "match": "core://account-types",
+      "values": {
+        "tt/keycloak": {
+          "description": "A keycloak user sub"
+        },
+        "x-imid/user": {
+          "description": "Legacy Naviga user account"
+        }
+      }
+    }
+  ],
+  "documents": [
+    {
+      "name": "Editorial info type",
+      "declares": "tt/editorial-info-type",
+      "attributes": {
+        "title": {},
+        "uri": {"glob":["tt://editorial-info-type/*"]}
+      },
+      "meta": [
+        {
+          "name": "Ttninjs match object",
+          "declares": {"type":"tt/ttninjs-match-object"},
+          "data":{
+            "npdoc.printpm": {
+              "optional":true,
+              "description":"Key used for setting Print PM product codes."
+            }
+          }
+        }
+      ]
+    },
+    {
+      "declares": "tt/grattis",
+      "links": [
+        {
+          "name": "Old DB reference",
+          "declares": {"rel":"alternate", "type":"tt/old-contact-db"},
+          "attributes": {
+            "uri": {"glob":["tt://kontid/*"]}
+          }
+        }
+      ],
+      "meta": [
+        {"ref": "core://definition"},
+        {
+          "name": "Contact information",
+          "declares": {"type":"core/contact"},
+          "count": 1,
+          "data": {
+            "firstName": {"optional":true},
+            "lastName": {"optional":true},
+            "title": {"optional":true}
+          }
+        },
+        {
+          "name": "Birthday date",
+          "declares": {"type":"tt/birthday"},
+          "count": 1,
+          "attributes": {
+            "value": {
+              "time": "2006-01-02",
+              "optional": true
+            }
+          },
+          "data": {
+            "year": {
+              "format":"int",
+              "optional": true
+            },
+            "died": {
+              "time": "2006-01-02",
+              "optional": true
+            },
+            "died_year": {
+              "format":"int",
+              "optional": true
+            },
+            "died_note": {
+              "optional": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "match": {"type": {"const":"core/group"}},
+      "links": [
+        {
+          "name": "Old DB reference",
+          "declares": {"rel":"alternate", "type":"tt/old-contact-db"},
+          "attributes": {
+            "uri": {"glob":["tt://kontid/*"]}
+          }
+        }
+      ]
+    },
+    {
+      "match": {"type": {"const":"core/author"}},
+      "meta": [
+        {
+          "name": "TT contact extensions",
+          "description": "TODO: why the duplicate signature/initials/short desc?",
+          "match": {"type": {"const":"core/contact-info"}},
+          "data": {
+            "signature": {"optional":true},
+            "initials": {"optional":true}
+          }
+        }
+      ],
+      "links": [
+        {
+          "name": "Linked keycloak account",
+          "match": {
+            "rel": {"const": "same-as"},
+            "type": {"const": "tt/keycloak"}
+          },
+          "attributes": {
+            "uri": {"glob":["core://user/**"]},
+            "role": {"enum": ["stage", "prod"]}
+          }
+        },
+        {
+          "name": "Linked NavigaID account",
+          "match": {
+            "rel": {"const": "same-as"},
+            "type": {"const": "x-imid/user"}
+          },
+          "attributes": {
+            "uri": {"glob":["imid://user/sub/*"]},
+            "role": {"const": "prod"}
+          }
+        }
+      ]
+    },
+    {
+      "match": {"type": {"const":"core/event"}},
+      "links": [
+        {
+          "name": "TT Organiser",
+          "description": "TODO: is this good data, or just noise?",
+          "declares": {"rel":"organiser", "type":"tt/organiser"},
+          "attributes": {
+            "uri": {},
+            "title": {}
+          }
+        },
+        {
+          "name": "TT Participant",
+          "description": "TODO: is this good data, or just noise?",
+          "declares": {"rel":"participant", "type": "tt/participant"},
+          "attributes": {
+            "uri": {},
+            "title": {}
+          }
+        }
+      ]
+    },
+    {
+      "match": {"type": {"const":"core/category"}},
+      "attributes": {
+        "uri": {
+          "glob": ["iptc://mediatopic/*"]
+        }
+      },
+      "links": [
+        {
+          "declares": {"type":"iptc/mediatopic", "rel":"same-as"},
+          "attributes": {
+            "uri": {
+              "glob": ["iptc://mediatopic/*"]
+            }
+          },
+          "data": {
+            "id": {"format":"int"}
+          }
+        }
+      ]
+    },
+    {
+      "match": {"type": {"const":"core/organisation"}},
+      "meta": [
+        {
+          "declares": {"type":"tt/type"},
+          "attributes": {
+            "value": {}
+          }
+        }
+      ]
+    },
+    {
+      "match": {"type": {"const":"core/flash"}},
+      "links": [
+        {
+          "match": {
+            "rel": {"const":"section"},
+            "type": {"const":"core/section"}
+          },
+          "minCount": 1
+        }
+      ]
+    },
+    {
+      "match": {"type": {"const":"core/editorial-info"}},
+      "meta": [
+        {"ref": "tt://slugline"}
+      ],
+      "links": [
+        {
+          "match": {
+            "rel": {"const":"section"},
+            "type": {"const":"core/section"}
+          },
+          "minCount": 1
+        },
+        {
+          "name": "Editorial-info type",
+          "description": "Specifies the editorial-info type",
+          "declares": {"type": "tt/editorial-info-type", "rel": "info-type"},
+          "attributes": {
+            "uuid": {}
+          }
+        },
+        {
+          "name": "Alternate ID",
+          "description": "TODO: is this actually used for live data? See stage/df6ebaba-b3fc-40ff-9ad2-19f953eb0c6a",
+          "declares": {"type": "tt/alt-id", "rel": "alternate"},
+          "attributes": {
+            "uri": {}
+          }
+        }
+      ],
+      "content": [
+        {"ref": "tt://visual"}
+      ]
+    },
+    {
+      "match": {"type": {"const":"core/article"}},
+      "links": [
+        {
+          "match": {
+            "rel": {"const":"section"},
+            "type": {"const":"core/section"}
+          },
+          "minCount": 1
+        },
+        {
+          "name": "Same as TT event",
+          "description": "TODO: what is this? Maybe a one-off, was in 69da3ef5-f1b0-5caf-b846-ca5682b9adf9",
+          "declares": {"rel":"same-as", "type": "tt/event"},
+          "attributes": {
+            "uri": {"glob":["tt://event/*"]}
+          },
+          "data": {
+            "id": {}
+          }
+        },
+        {
+          "name": "Subtype",
+          "declares": {"rel":"subtype"},
+          "attributes": {
+            "uri": {"glob": ["tt://subtype/*"]}
+          }
+        },
+        {
+          "name": "Content size",
+          "description": "Specifies the content sizes we can use",
+          "match": {
+            "type": {"const":"core/content-size"}
+          },
+          "attributes": {
+            "uri": {"enum":[
+              "core://content-size/article/medium"
+            ]}
+          }
+        },
+        {
+          "name": "Alternate ID",
+          "description": "TODO: is this actually used for live data? See stage/df6ebaba-b3fc-40ff-9ad2-19f953eb0c6a",
+          "declares": {"type": "tt/alt-id", "rel": "alternate"},
+          "attributes": {
+            "uri": {}
+          }
+        }
+      ],
+      "content": [
+        {
+          "name": "Dateline",
+          "description": "Deprecated in favour of vignette",
+          "declares": {"type":"tt/dateline"},
+          "data": {"text":{"allowEmpty":true}},
+          "deprecated": {
+            "label": "dateline",
+            "doc": "Use core/text vignette instead"
+          }
+        },
+        {
+          "name": "Question",
+          "declares": {"type":"tt/question"},
+          "data": {
+            "text": {
+              "allowEmpty":true,
+              "format": "html"
+            }
+          }
+        },
+        {"ref": "tt://visual"}
+      ],
+      "meta": [
+        {"ref": "tt://slugline"},
+        {
+          "name": "Sector",
+          "declares": {"type":"tt/sector"},
+          "description": "TODO: what is sector?",
+          "attributes": {
+            "value": {
+              "labels": ["keyword"]
+            }
+          },
+          "deprecated": {
+            "label": "tt-sector",
+            "doc": "Use core/section instead"
+          }
+        }
+      ]
+    }
+  ],
+  "meta": [
+    {
+      "id": "tt://slugline",
+      "block": {
+        "declares": {"type":"tt/slugline"},
+        "maxCount": 1,
+        "attributes": {
+          "value": {
+            "labels": ["keyword", "prefix"],
+            "hints": {"alias": ["slug"]}
+          }
+        }
+      }
+    }
+  ],
+  "content": [
+    {
+      "id": "tt://visual",
+      "block": {
+        "name": "TT visual element",
+        "description": "This can be either a picture or a graphic",
+        "declares": {"type":"tt/visual"},
+        "data": {
+          "caption": {"allowEmpty":true},
+          "html_caption": {
+            "format": "html",
+            "allowEmpty": true,
+            "optional": true
+          }
+        },
+        "meta": [
+          {"ref": "core://softcrop"}
+        ],
+        "links": [
+          {
+            "declares": {"rel":"self"},
+            "attributes": {
+              "uri": {},
+              "url": {},
+              "type": {
+                "enum": ["tt/picture", "tt/graphic"]
+              }
+            },
+            "data": {
+              "credit": {"allowEmpty":true},
+              "height": {"format":"int"},
+              "width": {"format":"int"},
+              "hiresScale": {
+                "format": "float",
+                "optional": true,
+                "deprecated": {
+                  "label": "hires-scale",
+                  "doc": "Not supported anymore"
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

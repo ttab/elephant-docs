@@ -1,0 +1,1422 @@
+{
+  "version": 1,
+  "name": "core",
+  "documents": [
+    {
+      "name": "Place",
+      "description": "A geographical location",
+      "declares": "core/place",
+      "meta": [
+        {
+          "declares": {"type":"core/position"},
+          "attributes": {
+            "value": {
+              "format": "wkt",
+              "geometry": "point"
+            }
+          }
+        },
+        {
+          "declares": {"type":"core/place-type"},
+          "attributes": {
+            "value": {
+              "enumReference": "core://place-types"
+            }
+          }
+        },
+        {
+          "declares": {"type":"core/alias"},
+          "attributes": {
+            "title": {}
+          }
+        }
+      ],
+      "links": [
+        {
+          "declares": {"type":"core/place"},
+          "attributes": {
+            "rel": {
+              "enumReference": "core://place-relationships"
+            },
+            "title": {},
+            "uuid": {}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Section",
+      "description": "A section for content",
+      "declares": "core/section",
+      "meta": [
+        {
+          "declares": {"type": "core/section"},
+          "count": 1,
+          "data": {
+            "code": {
+              "description": "Machine readable code for the section"
+            }
+          }
+        },
+        {
+          "declares": {"type":"core/colour"},
+          "attributes": {
+            "role": {
+              "description": "What role this colour fills, f.ex. 'dark-mode' or 'light-mode'.",
+              "optional": true
+            },
+            "value": {
+              "format": "colour",
+              "colourFormats": ["rgb"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Topic",
+      "description": "A topic for content",
+      "declares": "core/topic",
+      "meta": [
+        {"ref":"core://definition"}
+      ]
+    },
+    {
+      "name": "Content source",
+      "description": "A content source that can be credited",
+      "declares": "core/content-source",
+      "attributes": {
+        "title": {}
+      },
+      "meta": [
+        {"ref":"core://definition"}
+      ]
+    },
+    {
+      "name": "Story",
+      "description": "An ongoing story that gets reported on",
+      "declares": "core/story",
+      "meta": [
+        {"ref":"core://definition"}
+      ]
+    },
+    {
+      "name": "Person",
+      "description": "Used to describe people",
+      "declares": "core/person",
+      "meta": [
+        {"ref":"core://definition"},
+        {
+          "name": "Main metadata block",
+          "declares": {"type":"core/person"},
+          "count": 1,
+          "data": {
+            "firstName": {
+              "optional":true,
+              "labels": ["sortable"]
+            },
+            "lastName": {
+              "optional":true,
+              "labels": ["sortable"]
+            },
+            "employer": {"optional":true},
+            "title": {"optional":true}
+          }
+        },
+        {
+          "name": "Alias",
+          "declares": {"type":"core/alias"},
+          "attributes": {"title":{}}
+        }
+      ],
+      "links": [
+        {
+          "name": "Wikidata",
+          "declares": {"rel":"evidence", "type":"core/wikidata"},
+          "attributes": {"url":{}}
+        },
+        {
+          "name": "Webpage",
+          "declares": {"rel":"evidence", "type":"text/html"},
+          "attributes": {"url":{}}
+        }
+      ]
+    },
+    {
+      "name": "Image",
+      "description": "Image metadata document",
+      "declares": "core/image",
+      "attributes": {
+        "uri": {
+          "glob": [
+            "core://image/*"
+          ]
+        }
+      },
+      "meta": [
+        {
+          "declares": {
+            "type": "core/image"
+          },
+          "count": 1,
+          "data": {
+            "credit": {
+              "optional": true
+            },
+            "instructions": {
+              "optional": true
+            },
+            "copyright": {
+              "optional": true
+            },
+            "filename": {
+              "optional": true
+            },
+            "mimetype": {
+              "glob": ["image/*"]
+            }
+          }
+        }
+      ],
+      "links": [
+        {
+          "declares": {"rel":"author", "type":"core/author"},
+          "attributes": {
+            "title": {},
+            "uuid": {}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Author",
+      "description": "An author document used for f.ex. bylines",
+      "declares": "core/author",
+      "meta": [
+        {"ref": "core://note"},
+        {"ref": "core://definition"},
+        {
+          "declares": {"type":"core/author"},
+          "data": {
+            "initials": {"optional":true},
+            "firstName": {
+              "labels": ["sortable"]
+            },
+            "lastName": {
+              "labels": ["sortable"]
+            }
+          }
+        },
+        {
+          "declares": {"type":"core/contact-info"},
+          "attributes": {
+            "role": {
+              "enum": ["home", "office"]
+            }
+          },
+          "data": {
+            "email": {
+              "optional": true,
+              "labels": ["keyword"]
+            },
+            "name": {"optional":true},
+            "mobile": {"optional":true,
+              "labels": ["keyword"]
+            },
+            "phone": {"optional":true,
+              "labels": ["keyword"]
+            },
+            "postalCode": {
+              "description": "TODO: only in 83d072c8-fb07-47e2-9c5b-85f4453835f6?",
+              "optional": true
+            },
+            "streetAddress": {
+              "description": "TODO: only in 83d072c8-fb07-47e2-9c5b-85f4453835f6?",
+              "optional": true
+            },
+            "city": {
+              "description": "TODO: only in 83d072c8-fb07-47e2-9c5b-85f4453835f6?",
+              "optional": true
+            },
+            "country": {
+              "description": "TODO: only in 83d072c8-fb07-47e2-9c5b-85f4453835f6?",
+              "optional": true
+            }
+          }
+        }
+      ],
+      "links": [
+        {"ref": "core://author-identity"}
+      ]
+    },
+    {
+      "name": "Category",
+      "description": "A category for content",
+      "declares": "core/category",
+      "meta": [
+        {"ref":"core://definition"}
+      ],
+      "links": [
+        {
+          "declares": {"rel":"broader"},
+          "attributes": {
+            "type": {},
+            "uuid": {"optional":true},
+            "uri": {"optional":true}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Channel",
+      "description": "A publication channel",
+      "declares": "core/channel"
+    },
+    {
+      "name": "Factbox",
+      "description": "A factbox that can be used in articles",
+      "declares": "core/factbox",
+      "attributes": {
+        "title": {}
+      },
+      "meta": [
+        {
+          "declares": {"type":"core/factbox"},
+          "data": {
+            "byline": {"optional":true}
+          }
+        }
+      ],
+      "content": [
+        {
+          "declares": {"type":"core/text"},
+          "data": {
+            "text":{
+              "allowEmpty":true,
+              "format": "html"
+            }
+          }
+        },
+        {
+          "declares": {"type":"core/unordered-list"},
+          "content": [
+            {
+              "declares": {"type":"core/text"},
+              "data": {
+                "text":{
+                  "allowEmpty":true,
+                  "format": "html"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "declares": {"type":"core/ordered-list"},
+          "content": [
+            {
+              "declares": {"type":"core/text"},
+              "data": {
+                "text":{
+                  "allowEmpty":true,
+                  "format": "html"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Flash",
+      "description": "Flash news is used for quick breaking news items",
+      "declares": "core/flash",
+      "attributes": {
+        "title": {}
+      },
+      "links": [
+        {"ref": "core://byline"},
+        {"ref": "core://section"},
+        {"ref": "core://story"},
+        {"ref": "core://assignment"},
+        {"ref": "core://content-source"},
+        {"ref": "core://content-source/document"}
+      ],
+      "content": [
+        {
+          "description": "A flash text block",
+          "declares": {"type":"core/text"},
+          "attributes": {
+            "role": {
+              "optional": true,
+              "enumReference": "core://flash-text-roles"
+            }
+          },
+          "data": {
+            "text":{
+              "allowEmpty":true,
+              "format": "html"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Article",
+      "description": "An editorial article",
+      "declares": "core/article",
+      "content": [
+        {"ref": "core://text"},
+        {"ref": "core://image"},
+        {"ref": "core://youtube"},
+        {"ref": "core://htmlembed"},
+        {"ref": "core://unordered-list"},
+        {"ref": "core://ordered-list"},
+        {"ref": "core://factbox"},
+        {"ref": "core://table"},
+        {"ref": "core://socialembed"}
+      ],
+      "meta": [
+        {
+          "ref": "core://newsvalue",
+          "count": 1
+        },
+        {"ref": "core://note"},
+        {"ref": "core://teaser"}
+      ],
+      "links": [
+        {"ref": "core://byline"},
+        {"ref": "core://story"},
+        {"ref": "core://section"},
+        {"ref": "core://assignment"},
+        {"ref": "core://article-source"},
+        {"ref": "core://content-source"},
+        {"ref": "core://content-source/document"},
+        {
+          "name": "Publishing channel",
+          "declares": {"rel":"channel", "type": "core/channel"},
+          "attributes": {
+            "uuid": {},
+            "title": {"allowEmpty":true}
+          }
+        },
+        {
+          "name": "Premium",
+          "declares": {"type": "core/premium", "rel":"premium"},
+          "attributes": {
+            "uri": {"glob":["core://premium/*"]},
+            "title": {"allowEmpty":true}
+          }
+        },
+        {
+          "name": "Person",
+          "description": "A person that is a subject of the article",
+          "declares": {"type": "core/person", "rel":"subject"},
+          "attributes": {
+            "uuid": {},
+            "title": {"allowEmpty":true}
+          },
+          "data": {
+            "email": {
+              "optional":true,
+              "labels": ["keyword"]
+            },
+            "firstName": {"optional":true},
+            "lastName": {"optional":true},
+            "phone": {"optional":true}
+          }
+        },
+        {
+          "name": "Category",
+          "declares": {"type": "core/category", "rel":"subject"},
+          "attributes": {
+            "uuid": {},
+            "uri": {"optional":true},
+            "title": {"allowEmpty":true}
+          }
+        },
+        {
+          "name": "Content size",
+          "description": "Content size classification, described by URI",
+          "declares": {"type": "core/content-size", "rel":"content-size"},
+          "attributes": {
+            "uri": {},
+            "title": {"allowEmpty":true}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Editorial information",
+      "description": "Information for editorial staff",
+      "declares": "core/editorial-info",
+      "content": [
+        {"ref": "core://text"},
+        {"ref": "core://image"},
+        {"ref": "core://unordered-list"},
+        {"ref": "core://ordered-list"},
+        {"ref": "core://factbox"}
+      ],
+      "meta": [
+        {"ref": "core://note"}
+      ],
+      "links": [
+        {"ref": "core://byline"},
+        {"ref": "core://story"},
+        {"ref": "core://section"},
+        {"ref": "core://assignment"}
+      ]
+    },
+    {
+      "name": "Contacts group",
+      "description": "A group used to categorise contacts",
+      "declares": "core/group",
+      "meta": [
+        {"ref":"core://definition"}
+      ]
+    },
+    {
+      "name": "Contact information",
+      "description": "A useful contact",
+      "declares": "core/contact",
+      "meta": [
+        {"ref":"core://definition"},
+        {"ref":"core://note"},
+        {
+          "name": "Main metadata block",
+          "declares": {"type":"core/contact"},
+          "count": 1,
+          "data": {
+            "firstName": {"optional":true},
+            "lastName": {"optional":true},
+            "employer": {"optional":true},
+            "title": {"optional":true}
+          }
+        },
+        {
+          "declares": {"type":"core/contact-info"},
+          "attributes": {
+            "role": {"enum":["home", "office"]}
+          },
+          "data": {
+            "email": {
+              "optional":true,
+              "labels": ["keyword"]
+            },
+            "name": {"optional":true},
+            "address": {"optional":true},
+            "locality": {"optional":true},
+            "country": {"optional":true},
+            "phone": {"optional":true},
+            "mobile": {"optional":true}
+          },
+          "links": [
+            {
+              "name": "Webpage",
+              "declares": {"type":"text/html", "rel":"see-also"},
+              "attributes": {
+                "url": {"glob": ["http://**", "https://**"]}
+              }
+            }
+          ]
+        }
+      ],
+      "links": [
+        {
+          "name": "Groups",
+          "description": "The groups that the contact is assigned to",
+          "declares": {"rel":"group", "type": "core/group"},
+          "attributes": {
+            "uuid": {},
+            "title": {}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Calendar event",
+      "description": "A calendar event",
+      "declares": "core/event",
+      "meta": [
+        {
+          "name": "Main metadata block",
+          "declares": {"type":"core/event"},
+          "count": 1,
+          "data": {
+            "dateGranularity": {"enum":["date", "datetime"]},
+            "registration": {"allowEmpty":true},
+            "start": {"format":"RFC3339"},
+            "end": {"format":"RFC3339"},
+            "cancelled": {
+              "format": "bool",
+              "optional": true
+            }
+          }
+        },
+        {
+          "ref": "core://newsvalue",
+          "count": 1
+        },
+        {
+          "ref": "core://definition"
+        },
+        {
+          "ref": "core://description"
+        },
+        {
+          "ref": "core://copy-group"
+        },
+        {
+          "name": "Old time",
+          "description": "A block for storing the old start time when an event has been rescheduled",
+          "declares": {"type": "core/event-old-start"},
+          "data": {
+            "dateGranularity": {"enum":["date", "datetime"]},
+            "start": {"format":"RFC3339"},
+            "updated": {"format":"RFC3339"}
+          }
+        }
+      ],
+      "links": [
+        {
+          "name": "Replaced by",
+          "description": "The event has been moved to another day, and has been replaced by another event document.",
+          "declares": {"type": "core/event", "rel": "replaced-by"},
+          "attributes": {
+            "uuid": {}
+          }
+        },
+        {
+          "name": "Section",
+          "declares": {"type": "core/section", "rel":"section"},
+          "attributes": {
+            "uuid": {},
+            "title": {"optional":true}
+          }
+        },
+        {
+          "name": "Organiser",
+          "declares": {"rel":"organiser", "type":"core/organiser"},
+          "attributes": {
+            "uuid": {},
+            "title": {"optional":true}
+          }
+        },
+        {
+          "name": "Participant",
+          "declares": {"rel":"participant", "type": "core/author"},
+          "attributes": {
+            "uuid": {},
+            "title": {}
+          }
+        },
+        {
+          "name": "Place",
+          "declares": {"type": "core/place", "rel":"place"},
+          "attributes": {
+            "uuid": {},
+            "title": {}
+          }
+        },
+        {
+          "name": "Story",
+          "declares": {"type": "core/story", "rel":"story"},
+          "attributes": {
+            "uuid": {},
+            "title": {"allowEmpty":true}
+          }
+        },
+        {
+          "name": "Category",
+          "declares": {"type": "core/category", "rel":"category"},
+          "attributes": {
+            "uuid": {},
+            "uri": {"allowEmpty":true},
+            "title": {"allowEmpty":true}
+          }
+        },
+        {
+          "ref": "core://content-source"
+        },
+        {
+          "name": "Topic",
+          "declares": {"type": "core/topic", "rel":"subject"},
+          "attributes": {
+            "uuid": {},
+            "title": {"allowEmpty":true}
+          }
+        },
+        {
+          "name": "Geo position",
+          "declares": {"type":"core/geo-point", "rel": "location"},
+          "attributes": {
+            "uri": {
+              "glob":["geo://point/*"],
+              "optional": true,
+              "description": "TODO: where did this URI format come from?"
+            },
+            "title": {}
+          },
+          "data": {
+            "country": {"optional":true},
+            "extraInfo": {"optional": true},
+            "geometry": {
+              "format": "wkt",
+              "geometry": "point"
+            },
+            "locality": {"optional":true},
+            "name": {"optional":true}
+          }
+        },
+        {
+          "name": "Copyright holder",
+          "description": "TODO: do we really need this?",
+          "declares": {"rel":"copyrightholder"},
+          "attributes": {
+            "title": {}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Organisation",
+      "declares": "core/organisation",
+      "meta": [
+        {
+          "ref": "core://definition"
+        },
+        {
+          "name": "Alias",
+          "declares": {"type":"core/alias"},
+          "attributes": {"title":{}}
+        }
+      ],
+      "links": [
+        {
+          "name": "Wikidata",
+          "declares": {"rel":"evidence", "type":"core/wikidata"},
+          "attributes": {"url":{}}
+        },
+        {
+          "name": "Webpage",
+          "declares": {"rel":"evidence", "type":"text/html"},
+          "attributes": {"url":{}}
+        }
+      ]
+    },
+    {
+      "name": "Organiser",
+      "description": "A document describing an organisation",
+      "declares": "core/organiser",
+      "meta": [
+        {
+          "name": "Organiser contact information",
+          "declares": {"type":"core/contact-info"},
+          "count": 1,
+          "data": {
+            "city": {"optional":true},
+            "country": {"optional":true},
+            "email": {
+              "optional":true,
+              "labels": ["keyword"]
+            },
+            "phone": {"optional":true},
+            "streetAddress": {"optional":true},
+            "postalCode": {"optional":true}
+          }
+        },
+        {
+          "ref": "core://definition"
+        },
+        {
+          "ref": "core://note"
+        }
+      ],
+      "links": [
+        {
+          "name": "Browseable link for the organiser",
+          "description": "Usually the homepage or other resources that describes the organiser",
+          "declares": {"rel":"see-also", "type": "text/html"},
+          "attributes": {
+            "url": {}
+          }
+        },
+        {
+          "name": "Facebook page for the organiser",
+          "declares": {"rel":"see-also", "type": "core/social+facebook"},
+          "attributes": {
+            "url": {}
+          }
+        },
+        {
+          "name": "Twitter account for the organiser",
+          "declares": {"rel":"see-also", "type": "core/social+twitter"},
+          "data": {
+            "handle": {}
+          }
+        }
+      ]
+    }
+  ],
+  "enums": [
+    {
+      "declare": "core://account-types",
+      "name": "Account types for authors",
+      "values": {}
+    },
+    {
+      "declare": "core://text-roles",
+      "name": "Text block roles",
+      "values": {
+        "heading-1": {},
+        "heading-2": {},
+        "heading-3": {},
+        "heading-4": {},
+        "preamble": {},
+        "blockquote": {}
+      }
+    },
+    {
+      "declare": "core://flash-text-roles",
+      "name": "Text block roles for flashes",
+      "values": {
+        "heading-1": {}
+      }
+    },
+    {
+      "declare": "core://place-types",
+      "name": "Place types",
+      "values": {
+        "country": {},
+	"county": {},
+	"municipality": {},
+	"city": {},
+	"state": {},
+	"poi": {},
+	"region": {},
+        "province": {}
+      }
+    },
+    {
+      "declare": "core://place-relationships",
+      "name": "Place relationships",
+      "values": {
+        "country": {},
+	"county": {},
+	"municipality": {},
+	"state": {},
+	"region": {},
+	"province": {},
+        "capital-of": {}
+      }
+    }
+  ],
+  "meta": [
+    {
+      "id": "core://note",
+      "block": {
+        "declares": {"type":"core/note"},
+        "attributes": {
+          "role": {"enum": ["public", "internal"]}
+        },
+        "data": {
+          "text": {"allowEmpty":true}
+        }
+      }
+    },
+    {
+      "id": "core://softcrop",
+      "block": {
+        "declares": {"type":"core/softcrop"},
+        "attributes": {
+          "name": {
+            "optional": true
+          }
+        },
+        "data": {
+          "focus": {
+            "optional": true,
+            "description": "Point that should be kept visible when cropping, as relative 'x y' coordinates in the format '0.5 0.5' where 1 is the width or height of the image.",
+            "pattern": "^\\d(\\.\\d+)? \\d(\\.\\d+)?$"
+          },
+          "crop": {
+            "optional": true,
+            "description": "Rect that sets the bounds for dynamic cropping, as relative 'x y width height' coordinates in the format '0.2 0.2 0.5 0.5' where 1 is the width or height of the image.",
+            "pattern": "^\\d(\\.\\d+)? \\d(\\.\\d+)? \\d(\\.\\d+)? \\d(\\.\\d+)?$"
+          }
+        }
+      }
+    },
+    {
+      "id": "core://teaser",
+      "block": {
+        "declares": {"type":"core/teaser"},
+        "attributes": {
+          "title": {}
+        },
+        "data": {
+          "text": {"allowEmpty":true}
+        },
+        "links": [
+          {
+            "declares": {"rel":"image", "type":"core/image"},
+            "attributes": {
+              "uuid": {},
+              "uri": {"glob":["core://image/**"]}
+            },
+            "data": {
+              "height": {"format":"int"},
+              "width": {"format":"int"},
+              "imageInstructions": {"optional":true}
+            },
+            "meta": [
+              {"ref": "core://softcrop"}
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "core://description",
+      "block": {
+        "name": "Description",
+        "description": "A public or internal description of the entity",
+        "declares": {"type":"core/description"},
+        "attributes": {
+          "role": {"enum":["public", "internal"]}
+        },
+        "data": {
+          "text": {"allowEmpty":true}
+        }
+      }
+    },
+    {
+      "id": "core://definition",
+      "block": {
+        "declares": {"type":"core/definition"},
+        "attributes": {
+          "role": {"enum": ["short", "long"]}
+        },
+        "data": {
+          "text": {"allowEmpty":true}
+        }
+      }
+    },
+    {
+      "id": "core://newsvalue",
+      "block": {
+        "declares": {"type":"core/newsvalue"},
+        "maxCount": 1,
+        "attributes": {
+          "value": {
+            "description": "The assigned newsvalue",
+            "format": "int"
+          }
+        },
+        "data": {
+          "duration": {
+            "description": "Duration in seconds, can represent the halving time for the score in a scoring algorithm.",
+            "format":"int",
+            "optional": true
+          },
+          "end": {
+            "description": "The cut-off time that the document has no newsvalue",
+            "format":"RFC3339",
+            "optional":true
+          }
+        }
+      }
+    },
+    {
+      "id": "core://copy-group",
+      "block": {
+        "name": "Copy group",
+        "description": "Used to group documents that are created through copying",
+        "declares": {"type":"core/copy-group"},
+        "maxCount": 1,
+        "attributes": {
+          "uuid": {}
+        }
+      }
+    }
+  ],
+  "content": [
+    {
+      "id": "core://text",
+      "block": {
+        "description": "A standard text block",
+        "declares": {"type":"core/text"},
+        "attributes": {
+          "role": {
+            "optional":true,
+            "enumReference": "core://text-roles"
+          }
+        },
+        "data": {
+          "text":{
+            "allowEmpty":true,
+            "format": "html"
+          }
+        }
+      }
+    },
+    {
+      "id": "core://image",
+      "block": {
+        "name": "Core image block",
+        "declares": {"type":"core/image"},
+        "data": {
+          "text": {
+            "allowEmpty": true
+          },
+          "html_caption": {
+            "format": "html",
+            "allowEmpty": true,
+            "optional": true
+          },
+          "alttext": {
+            "optional": true,
+            "allowEmpty": true
+          },
+          "credit": {
+            "allowEmpty": true
+          },
+          "height": {"format":"int"},
+          "width": {"format":"int"}
+        },
+        "meta": [
+          {"ref": "core://softcrop"}
+        ],
+        "links": [
+          {
+            "declares": {"rel":"image", "type":"core/image"},
+            "count": 1,
+            "attributes": {
+              "uuid": {},
+              "uri": {"glob":["core://image/*"]}
+            }
+          },
+          {
+            "declares": {"rel":"author", "type":"core/author"},
+            "attributes": {
+              "title": {},
+              "uuid": {}
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "core://youtube",
+      "block": {
+        "declares": {"type":"core/youtube"},
+        "attributes": {
+          "uri": {"glob":["https://www.youtube.com/**"]},
+          "url": {"glob":["https://www.youtube.com/**"]}
+        },
+        "data": {
+          "start": {"format":"int"}
+        },
+        "links": [
+          {
+            "declares": {"rel":"alternate", "type": "text/html"},
+            "attributes": {
+              "url": {"glob":["https://www.youtube.com/**"]},
+              "title": {}
+            }
+          },
+          {
+            "declares": {"rel":"alternate", "type":"image/jpg"},
+            "attributes": {
+              "url":{}
+            },
+            "data": {
+              "height": {"format":"int"},
+              "width": {"format":"int"}
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "core://htmlembed",
+      "block": {
+        "declares": {"type":"core/htmlembed"},
+        "data": {
+          "text":{
+            "description": "TODO: add 'anything goes' policy to revisor to be able to use the html format validation for free-form html",
+            "allowEmpty":true
+          }
+        }
+      }
+    },
+    {
+      "id": "core://unordered-list",
+      "block": {
+        "declares": {"type":"core/unordered-list"},
+        "content": [
+          {
+            "declares": {"type":"core/text"},
+            "data": {
+              "text":{
+                "allowEmpty":true,
+                "format": "html"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "core://ordered-list",
+      "block": {
+        "declares": {"type":"core/ordered-list"},
+        "content": [
+          {
+            "declares": {"type":"core/text"},
+            "data": {
+              "text":{
+                "allowEmpty":true,
+                "format": "html"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "core://factbox",
+      "block": {
+        "declares": {"type":"core/factbox"},
+        "attributes": {
+          "title": {},
+          "uuid": {
+            "allowEmpty":true,
+            "deprecated": {
+              "label": "factbox_source_uuid",
+              "doc": "Use source link instead"
+            }
+          }
+        },
+        "links": [
+          {
+            "declares": {"rel":"source"},
+            "maxCount": 1,
+            "attributes": {
+              "uuid": {}
+            }
+          }
+        ],
+        "data": {
+          "byline": {"optional":true},
+          "locally_changed": {
+            "format": "RFC3339",
+            "optional": true
+          },
+          "original_updated": {
+            "format": "RFC3339",
+            "optional": true
+          },
+          "original_version": {
+            "format": "int",
+            "optional": true
+          }
+        },
+        "content": [
+          {
+            "declares": {"type":"core/text"},
+            "data": {
+              "text":{
+                "allowEmpty": true,
+                "format": "html"
+              }
+            }
+          },
+          {"ref": "core://ordered-list"},
+          {"ref": "core://unordered-list"},
+          {"ref": "core://table"}
+        ]
+      }
+    },
+    {
+      "id": "core://table",
+      "block": {
+        "name": "Table",
+        "declares": {"type":"core/table"},
+        "data": {
+          "caption": {"allowEmpty":true, "optional":true},
+          "meta": {"allowEmpty":true},
+          "thead": {
+            "format": "html",
+            "htmlPolicy": "table",
+            "optional": true
+          },
+          "tbody": {
+            "format": "html",
+            "htmlPolicy": "table"
+          },
+          "tfoot": {
+            "format": "html",
+            "htmlPolicy": "table",
+            "optional": true
+          }
+        }
+      }
+    },
+    {
+      "id": "core://socialembed",
+      "block": {
+        "name": "Social embed",
+        "declares": {"type":"core/socialembed"},
+        "links": [
+          {
+            "name": "Twitter embed link",
+            "declares": {"type":"core/tweet", "rel":"self"},
+            "attributes": {
+              "uri": {"glob":["core://tweet/*"]},
+              "url": {"glob":[
+                "https://twitter.com/**",
+                "https://x.com/**"
+              ]}
+            }
+          },
+          {
+            "name": "Instagram embed link",
+            "declares": {"type":"core/instagram", "rel":"self"},
+            "attributes": {
+              "uri": {"glob":["core://instagram/*"]},
+              "url": {"glob":["https://www.instagram.com/**"]}
+            }
+          },
+          {
+            "name": "Embed location link",
+            "declares": {"type":"text/html", "rel":"alternate"},
+            "attributes": {
+              "title": {},
+              "url": {}
+            },
+            "data": {
+              "context": {},
+              "provider": {}
+            }
+          },
+          {
+            "name": "Embed image",
+            "declares": {"type":"image/jpg", "rel":"alternate"},
+            "attributes": {
+              "url": {}
+            },
+            "data": {
+              "width": {"format":"int"},
+              "height": {"format":"int"}
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "links": [
+    {
+      "id": "core://byline",
+      "block": {
+        "name": "Author byline",
+        "declares": {"type": "core/author", "rel":"author"},
+        "attributes": {
+          "uuid": {"optional":true},
+          "title": {}
+        },
+        "data": {
+          "email": {
+            "optional":true,
+            "labels": ["keyword"]
+          },
+          "firstName": {"optional":true},
+          "lastName": {"optional":true},
+          "longDescription": {"optional":true},
+          "shortDescription": {"optional":true},
+          "phone": {"optional":true}
+        }
+      }
+    },
+    {
+      "id": "core://author-identity",
+      "block": {
+        "name": "Association with an account, ties a author document to a login.",
+        "declares": {"rel":"same-as"},
+        "attributes": {
+          "type": {"enumReference": "core://account-types"},
+          "uri": {
+            "description": "URI identifying the account."
+          },
+          "role": {
+            "description": "Use role to describe what context the account is valid in."
+          }
+        }
+      }
+    },
+    {
+      "id": "core://story",
+      "block": {
+        "name": "Story",
+        "declares": {"type": "core/story", "rel":"subject"},
+        "attributes": {
+          "uuid": {},
+          "title": {"allowEmpty":true}
+        }
+      }
+    },
+    {
+      "id": "core://section",
+      "block": {
+        "name": "Section",
+        "declares": {"rel":"section", "type": "core/section"},
+        "attributes": {
+          "uuid": {},
+          "title": {"allowEmpty":true}
+        }
+      }
+    },
+    {
+      "id": "core://assignment",
+      "block": {
+        "name": "Assignment",
+        "description": "A link to the assignment that the document was produced for",
+        "declares": {"type": "core/assignment", "rel":"assignment"},
+        "attributes": {
+          "uuid": {}
+        }
+      }
+    },
+    {
+      "id": "core://article-source",
+      "block": {
+        "name": "Article source",
+        "description": "Points to the original article if this one is a copy",
+        "declares": {"type": "core/article", "rel":"source"},
+        "attributes": {
+          "uuid": {}
+        },
+        "data": {
+          "version": {
+            "format": "int",
+            "optional": true,
+            "description": "The version of the original article when it was copied"
+          }
+        }
+      }
+    },
+    {
+      "id": "core://content-source",
+      "block": {
+        "name": "Content source",
+        "description": "The entity that is the source of the content, e.g. the organisation that produced it.",
+        "declares": {"type": "core/content-source", "rel":"source"},
+        "attributes": {
+          "uuid": {
+            "optional": true
+          },
+          "uri": {},
+          "title": {}
+        }
+      }
+    },
+    {
+      "id": "core://content-source/document",
+      "block": {
+        "name": "Source document",
+        "description": "A document that has been used as a source",
+        "declares": {"rel":"source-document"},
+        "attributes": {
+          "uuid": {},
+          "type": {},
+          "uri": {
+            "optional": true
+          },
+          "title": {}
+        },
+        "data": {
+          "version": {
+            "name": "The version of the document that was used.",
+            "format": "int",
+            "optional": true
+          }
+        }
+      }
+    },
+    {
+      "id": "core://content-source/use",
+      "block": {
+        "name": "Content source",
+        "description": "Content source that should be referenced when using content from this source or provider.",
+        "declares": {
+          "type": "core/content-source",
+          "rel": "use-source"
+        },
+        "attributes": {
+          "uri": {},
+          "title": {}
+        }
+      }
+    }
+  ],
+  "htmlPolicies": [
+    {
+      "name": "default",
+      "elements": {
+        "strong": {
+          "attributes": {
+            "id": {"optional":true}
+          }
+        },
+        "em": {
+          "attributes": {
+            "id": {"optional":true}
+          }
+        },
+        "a": {
+          "attributes": {
+            "id": {"optional":true},
+            "href": {"optional":true}
+          }
+        }
+      }
+    },
+    {
+      "name": "table",
+      "uses": "default",
+      "elements": {
+        "tr": {
+          "attributes": {
+            "id": {"optional":true}
+          }
+        },
+        "td": {
+          "attributes": {
+            "id": {"optional":true},
+            "colspan": {
+              "format": "int",
+              "optional":true
+            },
+            "rowspan": {
+              "format": "int",
+              "optional":true
+            }
+          }
+        },
+        "th": {
+          "attributes": {
+            "id": {"optional":true},
+            "colspan": {
+              "format": "int",
+              "optional":true
+            },
+            "rowspan": {
+              "format": "int",
+              "optional":true
+            }
+          }
+        }
+      }
+    }
+  ]
+}

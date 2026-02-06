@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "name": "core-metadoc",
+  "documents": [
+    {
+      "name": "Article meta document",
+      "description": "Document used to store background information on an article",
+      "declares": "core/article+meta",
+      "links": [
+        {
+          "name": "Linked subject",
+          "description": "A subject for the article, this is primarily something that will be added by automated systems, but can be manipulated by end users as well.",
+          "declares": {"rel":"subject"},
+          "attributes": {
+            "uuid": {"optional":true},
+            "title": {},
+            "type": {}
+          },
+          "data": {
+            "confidence": {
+              "description": "the confidence the automated system had in tagging this entity",
+              "format": "float"
+            },
+            "status": {
+              "description": "Lifecycle stage of the link, rejected/accepted can be used to provide training feedback to automated systems.",
+              "enum": ["automatic", "rejected", "accepted"]
+            },
+            "manually-added": {
+              "description": "Should be used when a user manually adds something that the automatic systems missed.",
+              "format": "RFC3339",
+              "optional": true
+            }
+          }
+        },
+        {
+          "name": "Suggested linked subject",
+          "description": "A suggested subject for the article, this is primarily something that will be added by automated systems, but can be manipulated by end users as well.",
+          "declares": {"rel":"suggestion"},
+          "attributes": {
+            "uuid": {"optional":true},
+            "title": {},
+            "type": {}
+          },
+          "data": {
+            "confidence": {
+              "description": "the confidence the automated system had in tagging this entity",
+              "format": "float"
+            },
+            "status": {
+              "description": "Lifecycle stage of the link, rejected/accepted can be used to provide training feedback to automated systems.",
+              "enum": ["automatic", "rejected", "accepted"]
+            },
+            "manually-added": {
+              "description": "Should be used when a user manually adds something that the automatic systems missed.",
+              "format": "RFC3339",
+              "optional": true
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

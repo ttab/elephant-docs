@@ -1,0 +1,97 @@
+{{template "header" .}}
+{{- with .Contents }}
+{{- $block := .Block }}
+
+<div class="page-header">
+  <div class="page-title">
+    <h1>{{if $block.Block.Name}}{{$block.Block.Name}}{{else}}{{$block.ID}}{{end}}</h1>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem;">
+    <code style="font-size: 1rem; background: var(--color-bg-code); padding: 0.25rem 0.75rem; border-radius: var(--radius-md);">{{$block.ID}}</code>
+    <span class="constraint-tag tag-{{$block.Kind}}">{{$block.Kind}}</span>
+    {{ template "schema_badge" $block.DeclaredIn }}
+  </div>
+
+  {{- if $block.Block.Description }}
+  <p style="color: var(--color-text-muted); font-size: 1.1rem;">{{$block.Block.Description}}</p>
+  {{- end }}
+</div>
+
+<!-- Block Signature -->
+<h2 class="section-header">Signature</h2>
+<div class="card">
+  <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+    {{ template "block_signature" $block.Block }}
+    {{ template "count_constraints" $block.Block }}
+  </div>
+  {{ template "deprecation_notice" $block.Block.Deprecated }}
+</div>
+
+{{- if $block.Block.Attributes.Keys }}
+<h2 class="section-header">Attributes</h2>
+<div class="card">
+  {{ template "constraint_map_table" $block.Block.Attributes }}
+</div>
+{{- end }}
+
+{{- if $block.Block.Data.Keys }}
+<h2 class="section-header">Data</h2>
+<div class="card">
+  {{ template "constraint_map_table" $block.Block.Data }}
+</div>
+{{- end }}
+
+{{- if $block.Block.Meta }}
+<h2 class="section-header">Nested Meta</h2>
+{{- range $block.Block.Meta }}
+<div class="card">
+  {{ template "nested_block" . }}
+</div>
+{{- end }}
+{{- end }}
+
+{{- if $block.Block.Links }}
+<h2 class="section-header">Nested Links</h2>
+{{- range $block.Block.Links }}
+<div class="card">
+  {{ template "nested_block" . }}
+</div>
+{{- end }}
+{{- end }}
+
+{{- if $block.Block.Content }}
+<h2 class="section-header">Nested Content</h2>
+{{- range $block.Block.Content }}
+<div class="card">
+  {{ template "nested_block" . }}
+</div>
+{{- end }}
+{{- end }}
+
+{{- if $block.UsedBy }}
+<h2 class="section-header">Referenced By</h2>
+<div class="card">
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Document Type</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{- range $block.UsedBy }}
+        <tr>
+          <td>
+            <a href="{{abs_url (print "/schemas/documents/" . "/")}}">{{.}}</a>
+          </td>
+        </tr>
+        {{- end }}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{- end }}
+
+{{- end }}
+{{template "footer" .}}

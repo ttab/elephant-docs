@@ -1,0 +1,160 @@
+{{template "header" .}}
+{{- with .Contents }}
+
+<div class="page-header">
+  <h1>{{.Title}}</h1>
+  <p style="color: var(--color-text-muted); margin-top: 0.5rem;">
+    Validation schemas for Elephant document types
+  </p>
+</div>
+
+<!-- Schema Sets -->
+<h2 class="section-header">Schema Sets</h2>
+<div class="api-cards-grid">
+  {{- range .Sets }}
+  <a href="{{abs_url (print "/schemas/" .Name "/")}}" class="api-card">
+    <div class="api-card-header">
+      <h3>{{.Title}}</h3>
+    </div>
+    <div class="api-card-body">
+      <div class="api-card-services">
+        <strong>Documents:</strong>
+        <ul>
+          {{- range .Set.Documents }}
+          {{- if .Declares }}
+          <li>{{.Declares}}</li>
+          {{- end }}
+          {{- end }}
+        </ul>
+      </div>
+    </div>
+  </a>
+  {{- end }}
+</div>
+
+<!-- Document Types -->
+<h2 class="section-header">Document Types</h2>
+<div class="api-cards-grid">
+  {{- range .Documents }}
+  <a href="{{abs_url (print "/schemas/documents/" .Type "/")}}" class="api-card">
+    <div class="api-card-header">
+      <h3>{{if .Name}}{{.Name}}{{else}}{{.Type}}{{end}}</h3>
+    </div>
+    <div class="api-card-body">
+      <div style="margin-bottom: 0.5rem;">
+        <code style="font-size: 0.875rem;">{{.Type}}</code>
+      </div>
+      {{- if .Description }}
+      <p style="color: var(--color-text-muted); font-size: 0.875rem; margin: 0;">{{.Description}}</p>
+      {{- end }}
+      <div style="margin-top: 0.5rem; display: flex; gap: 0.25rem; flex-wrap: wrap;">
+        {{ template "schema_badge" .DeclaredIn }}
+        {{- range .ExtendedBy }}
+        {{ template "schema_badge" . }}
+        {{- end }}
+      </div>
+    </div>
+  </a>
+  {{- end }}
+</div>
+
+{{- if .Blocks }}
+<!-- Reusable Blocks -->
+<h2 class="section-header">Reusable Block Definitions</h2>
+<div class="card">
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Kind</th>
+          <th>Name</th>
+          <th>Set</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{- range .Blocks }}
+        <tr>
+          <td data-label="ID">
+            <a href="{{abs_url (print "/schemas/blocks/" .Kind "/" (schema_slug .ID) "/")}}">
+              <code>{{.ID}}</code>
+            </a>
+          </td>
+          <td data-label="Kind"><span class="constraint-tag tag-{{.Kind}}">{{.Kind}}</span></td>
+          <td data-label="Name">{{.Block.Name}}</td>
+          <td data-label="Set">{{ template "schema_badge" .DeclaredIn }}</td>
+        </tr>
+        {{- end }}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{- end }}
+
+{{- if .Enums }}
+<!-- Enums -->
+<h2 class="section-header">Enumerations</h2>
+<div class="card">
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Values</th>
+          <th>Set</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{- range .Enums }}
+        <tr>
+          <td data-label="ID">
+            <a href="{{abs_url (print "/schemas/enums/" (schema_slug .ID) "/")}}">
+              <code>{{.ID}}</code>
+            </a>
+          </td>
+          <td data-label="Name">{{.Name}}</td>
+          <td data-label="Values">{{len .Values}} values</td>
+          <td data-label="Set">
+            {{- if .DeclaredIn }}{{ template "schema_badge" .DeclaredIn }}{{ end -}}
+            {{- range .ExtendedBy }}{{ template "schema_badge" . }}{{ end -}}
+          </td>
+        </tr>
+        {{- end }}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{- end }}
+
+{{- if .Policies }}
+<!-- HTML Policies -->
+<h2 class="section-header">HTML Policies</h2>
+<div class="card">
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Uses</th>
+          <th>Elements</th>
+          <th>Set</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{- range .Policies }}
+        <tr>
+          <td data-label="Name"><strong>{{.Name}}</strong></td>
+          <td data-label="Uses">{{if .Uses}}{{.Uses}}{{end}}{{if .Extends}}extends: {{.Extends}}{{end}}</td>
+          <td data-label="Elements">{{len .Elements}} elements</td>
+          <td data-label="Set">{{ template "schema_badge" .DeclaredIn }}</td>
+        </tr>
+        {{- end }}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{- end }}
+
+{{- end }}
+{{template "footer" .}}

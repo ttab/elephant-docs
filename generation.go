@@ -152,6 +152,9 @@ func Generate(
 
 	tpl.Funcs(funcs)
 
+	// Add schema-specific template functions.
+	tpl.Funcs(schemaTemplateFuncs())
+
 	tpl, err = tpl.ParseFS(templateFS, "templates/*.html")
 	if err != nil {
 		return fmt.Errorf("parse templates: %w", err)
@@ -199,6 +202,47 @@ func Generate(
 	slices.SortFunc(apiMenu, func(a MenuItem, b MenuItem) int {
 		return strings.Compare(a.Title, b.Title)
 	})
+
+	// Load and resolve schemas if configured.
+	var schemaDoc *SchemaDoc
+
+	if conf.Schemas != nil {
+		uiPrintln("Loading schemas...")
+
+		constraintSets, err := loadConstraintSets(*conf.Schemas)
+		if err != nil {
+			return fmt.Errorf("load constraint sets: %w", err)
+		}
+
+		schemaDoc, err = resolveSchemas(constraintSets, *conf.Schemas)
+		if err != nil {
+			return fmt.Errorf("resolve schemas: %w", err)
+		}
+
+		// Add schemas menu section.
+		schemaMenuItem := MenuItem{
+			Title: "Schemas",
+		}
+
+		schemaMenuItem.Children = append(schemaMenuItem.Children, MenuItem{
+			Title: "Overview",
+			HRef:  "/schemas",
+		})
+
+		for _, d := range schemaDoc.Documents {
+			name := d.Name
+			if name == "" {
+				name = d.Type
+			}
+
+			schemaMenuItem.Children = append(schemaMenuItem.Children, MenuItem{
+				Title: name,
+				HRef:  fmt.Sprintf("/schemas/documents/%s", d.Type),
+			})
+		}
+
+		apiMenu = append(apiMenu, schemaMenuItem)
+	}
 
 	// Prepend the home item.
 	apiMenu = append([]MenuItem{
@@ -286,12 +330,27 @@ func Generate(
 			return strings.Compare(a.Title, b.Title)
 		})
 
+		// Collect schema cards for the home page.
+		var schemaCards []SchemaCard
+		if schemaDoc != nil {
+			for _, d := range schemaDoc.Documents {
+				schemaCards = append(schemaCards, SchemaCard{
+					Name:        docDisplayName(d),
+					Type:        d.Type,
+					URL:         fmt.Sprintf("/schemas/documents/%s", d.Type),
+					Description: d.Description,
+					SetName:     d.DeclaredIn,
+				})
+			}
+		}
+
 		page := Page{
 			Title: "Start",
 			Menu:  apiMenu,
 			Contents: HomePage{
-				HTML:     html,
-				APICards: apiCards,
+				HTML:        html,
+				APICards:    apiCards,
+				SchemaCards: schemaCards,
 			},
 		}
 
@@ -364,6 +423,13 @@ func Generate(
 
 		return nil
 	})
+
+	// Render schema pages.
+	if schemaDoc != nil {
+		grp.Go(func() error {
+			return renderSchemaPages(outDir, schemaDoc, tpl, apiMenu)
+		})
+	}
 
 	err = grp.Wait()
 	if err != nil {
@@ -494,8 +560,9 @@ type MarkdownPage struct {
 }
 
 type HomePage struct {
-	HTML     template.HTML
-	APICards []APICard
+	HTML        template.HTML
+	APICards    []APICard
+	SchemaCards []SchemaCard
 }
 
 type APICard struct {
