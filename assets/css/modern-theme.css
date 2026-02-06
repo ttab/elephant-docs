@@ -166,6 +166,97 @@ pre code {
 }
 
 /* ============================================
+   Icon Styling
+   ============================================ */
+
+/* All icons */
+img[src*="/icons/"] {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* Icons in primary buttons and FABs - white color */
+.btn-primary img[src*="/icons/"],
+.fab img[src*="/icons/"],
+.nav-helper-close img[src*="/icons/"] {
+  filter: brightness(0) invert(1);
+}
+
+/* Icons in secondary buttons - dark in light mode, light in dark mode */
+.btn-secondary img[src*="/icons/"],
+.mobile-menu-toggle img[src*="/icons/"] {
+  filter: brightness(0) invert(0.3);
+  opacity: 0.8;
+}
+
+.btn-secondary:hover img[src*="/icons/"],
+.mobile-menu-toggle:hover img[src*="/icons/"] {
+  opacity: 1;
+  filter: brightness(0) invert(0.2);
+}
+
+/* Icons in regular context - use text color */
+.nav-chevron img[src*="/icons/"],
+.anchor-link img[src*="/icons/"],
+.nav-helper-search img[src*="/icons/"] {
+  filter: brightness(0) invert(0.5);
+  opacity: 0.6;
+}
+
+/* Hover states */
+.anchor-link:hover img[src*="/icons/"] {
+  opacity: 1;
+  filter: brightness(0) invert(0.3);
+}
+
+/* Theme icons */
+/* Light mode: sun icon is black (no invert) */
+.theme-icon-light {
+  filter: none !important;
+  opacity: 0.8;
+}
+
+.theme-toggle:hover .theme-icon-light {
+  opacity: 1;
+}
+
+/* Dark mode: moon icon is white (invert) */
+.theme-icon-dark {
+  filter: brightness(0) invert(1) !important;
+  opacity: 0.9;
+}
+
+.theme-toggle:hover .theme-icon-dark {
+  opacity: 1;
+}
+
+/* Dark mode adjustments */
+[data-theme="dark"] .nav-chevron img[src*="/icons/"],
+[data-theme="dark"] .anchor-link img[src*="/icons/"],
+[data-theme="dark"] .nav-helper-search img[src*="/icons/"] {
+  filter: brightness(0) invert(0.7);
+  opacity: 0.7;
+}
+
+[data-theme="dark"] .anchor-link:hover img[src*="/icons/"] {
+  opacity: 1;
+  filter: brightness(0) invert(0.9);
+}
+
+/* Secondary buttons and mobile menu in dark mode - light icons */
+[data-theme="dark"] .btn-secondary img[src*="/icons/"],
+[data-theme="dark"] .mobile-menu-toggle img[src*="/icons/"] {
+  filter: brightness(0) invert(0.8);
+  opacity: 0.8;
+}
+
+[data-theme="dark"] .btn-secondary:hover img[src*="/icons/"],
+[data-theme="dark"] .mobile-menu-toggle:hover img[src*="/icons/"] {
+  opacity: 1;
+  filter: brightness(0) invert(0.9);
+}
+
+/* ============================================
    Header
    ============================================ */
 

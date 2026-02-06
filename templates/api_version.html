@@ -12,17 +12,12 @@
   <div class="page-actions">
     {{- if and .LatestVersion (ne .LatestVersion .Version) }}
     <a class="btn btn-secondary" href="{{base_path}}/apis/{{.Name}}/{{.LatestVersion}}">
-      <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-        <polyline points="18 15 12 9 6 15"></polyline>
-      </svg>
+      <img src="{{base_path}}/assets/icons/arrow-up.svg" class="btn-icon" alt="">
       Latest version
     </a>
     {{ end }}
     <a class="btn btn-secondary" href="{{base_path}}/apis/{{.Name}}/changelog">
-      <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="10"></circle>
-        <polyline points="12 6 12 12 16 14"></polyline>
-      </svg>
+      <img src="{{base_path}}/assets/icons/clock.svg" class="btn-icon" alt="">
       View all versions
     </a>
   </div>
@@ -48,10 +43,7 @@
     <h3 class="card-title">
       {{ .Name }}
       <a href="#service-{{.Name}}" class="anchor-link" aria-label="Link to {{.Name}}">
-        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
-        </svg>
+        <img src="{{base_path}}/assets/icons/link.svg" width="20" height="20" alt="">
       </a>
     </h3>
   </div>
@@ -75,10 +67,7 @@
               <div class="method-name">
                 {{.Name}}
                 <a href="#method-{{$service.Name}}.{{.Name}}" class="anchor-link" aria-label="Link to {{$service.Name}}.{{.Name}}">
-                  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
-                  </svg>
+                  <img src="{{base_path}}/assets/icons/link.svg" width="16" height="16" alt="">
                 </a>
               </div>
               <span class="method-endpoint">POST /twirp/{{$package}}.{{$service.Name}}/{{.Name}}</span>
@@ -91,9 +80,7 @@
               {{- if .Readme }}
               <div style="margin-top: 0.75rem;">
                 <a href="{{base_path}}/apis/{{$c.Name}}/{{$c.Version}}/methods/{{$service.Name}}/{{.Name}}/" class="btn btn-secondary" style="display: inline-flex;">
-                  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-                  </svg>
+                  <img src="{{base_path}}/assets/icons/document.svg" width="16" height="16" alt="">
                   View Documentation
                 </a>
               </div>
@@ -121,10 +108,7 @@
     <h3 class="card-title">
       {{ .Name }}
       <a href="#message-{{.Name}}" class="anchor-link" aria-label="Link to {{.Name}}">
-        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
-        </svg>
+        <img src="{{base_path}}/assets/icons/link.svg" width="20" height="20" alt="">
       </a>
     </h3>
   </div>
@@ -198,10 +182,7 @@
     <h3 class="card-title">
       {{ .Name }}
       <a href="#enum-{{.Name}}" class="anchor-link" aria-label="Link to {{.Name}}">
-        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
-        </svg>
+        <img src="{{base_path}}/assets/icons/link.svg" width="20" height="20" alt="">
       </a>
     </h3>
   </div>
@@ -251,17 +232,11 @@
     <div class="nav-helper-header">
       <h3 id="nav-helper-title">Navigate to...</h3>
       <button onclick="closeNavigator()" class="nav-helper-close" aria-label="Close">
-        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
+        <img src="{{base_path}}/assets/icons/close.svg" width="20" height="20" alt="">
       </button>
     </div>
     <div class="nav-helper-search">
-      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-        <circle cx="11" cy="11" r="8"></circle>
-        <path d="m21 21-4.35-4.35"></path>
-      </svg>
+      <img src="{{base_path}}/assets/icons/search.svg" width="18" height="18" alt="">
       <input
         type="text"
         id="nav-helper-input"
@@ -281,15 +256,10 @@
 <!-- Floating Action Buttons -->
 <div class="floating-actions">
   <button id="back-to-top" onclick="scrollToTop()" class="fab" aria-label="Back to top" title="Back to top" style="display: none;">
-    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-      <polyline points="18 15 12 9 6 15"></polyline>
-    </svg>
+    <img src="{{base_path}}/assets/icons/arrow-up.svg" width="20" height="20" alt="">
   </button>
   <button onclick="openNavigator()" class="fab" aria-label="Open navigation helper" title="Navigate (Ctrl+K)">
-    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-      <circle cx="11" cy="11" r="8"></circle>
-      <path d="m21 21-4.35-4.35"></path>
-    </svg>
+    <img src="{{base_path}}/assets/icons/search.svg" width="20" height="20" alt="">
   </button>
 </div>
 
