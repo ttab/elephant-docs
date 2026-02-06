@@ -236,11 +236,62 @@ func Generate(
 			return fmt.Errorf("render start page contents: %w", err)
 		}
 
+		// Collect API cards for the home page
+		var apiCards []APICard
+		for _, module := range modules {
+			version := module.LatestVersion
+			docCommit := version.Commit
+
+			// Use the latest docs from HEAD for the latest version
+			head, err := module.Repo.Head()
+			if err != nil {
+				return fmt.Errorf("get repo head: %w", err)
+			}
+
+			c, err := module.Repo.CommitObject(head.Hash())
+			if err != nil {
+				return fmt.Errorf("get repo head commit: %w", err)
+			}
+
+			docCommit = c
+
+			apis, err := collectAPIData(modules, module, version, docCommit)
+			if err != nil {
+				return fmt.Errorf("collect API data for %s@%s: %w",
+					module.Name, version.Tag, err)
+			}
+
+			for apiName, apiData := range apis {
+				conf := apiConf[apiName]
+
+				// Collect all service names
+				var services []string
+				for _, decl := range apiData.Declarations {
+					for _, svc := range decl.Services {
+						services = append(services, svc.Name)
+					}
+				}
+
+				apiCards = append(apiCards, APICard{
+					Name:     apiName,
+					Title:    conf.Title,
+					URL:      fmt.Sprintf("/apis/%s/%s", apiName, version.Tag),
+					Services: services,
+				})
+			}
+		}
+
+		// Sort API cards by title
+		slices.SortFunc(apiCards, func(a, b APICard) int {
+			return strings.Compare(a.Title, b.Title)
+		})
+
 		page := Page{
 			Title: "Start",
 			Menu:  apiMenu,
-			Contents: MarkdownPage{
-				HTML: html,
+			Contents: HomePage{
+				HTML:     html,
+				APICards: apiCards,
 			},
 		}
 
@@ -440,6 +491,18 @@ func renderMarkdown(markdown []byte, opts markdownOptions) (template.HTML, error
 
 type MarkdownPage struct {
 	HTML template.HTML
+}
+
+type HomePage struct {
+	HTML     template.HTML
+	APICards []APICard
+}
+
+type APICard struct {
+	Name     string
+	Title    string
+	URL      string
+	Services []string
 }
 
 func renderModuleVersionPages(

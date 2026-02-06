@@ -1,5 +1,37 @@
 {{template "header" .}}
 <div class="prose">
-  {{ .Contents.HTML }}
+  {{- if .Contents.HTML }}
+    {{ .Contents.HTML }}
+  {{- end }}
 </div>
+
+{{- if .Contents.APICards }}
+<h2 class="section-header" style="margin-top: 3rem;">APIs</h2>
+<div class="api-cards-grid">
+  {{- range .Contents.APICards }}
+  <a href="{{base_path}}{{.URL}}" class="api-card">
+    <div class="api-card-header">
+      <h3>{{.Title}}</h3>
+    </div>
+    <div class="api-card-body">
+      {{- if .Services }}
+      <div class="api-card-services">
+        <strong>Services:</strong>
+        <ul>
+          {{- range .Services }}
+          <li>{{.}}</li>
+          {{- end }}
+        </ul>
+      </div>
+      {{- else }}
+      <div class="api-card-types">
+        Type declarations
+      </div>
+      {{- end }}
+    </div>
+  </a>
+  {{- end }}
+</div>
+{{- end }}
+
 {{template "footer" .}}

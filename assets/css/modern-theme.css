@@ -1220,3 +1220,86 @@ tbody tr:last-child td {
     right: 1rem;
   }
 }
+
+/* ============================================
+   API Cards Grid (Home Page)
+   ============================================ */
+
+.api-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--spacing-lg);
+  margin-top: var(--spacing-xl);
+}
+
+.api-card {
+  display: block;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  text-decoration: none;
+  color: var(--color-text);
+  transition: all var(--transition-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.api-card:hover {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+}
+
+.api-card-header h3 {
+  margin: 0 0 var(--spacing-md) 0;
+  color: var(--color-heading);
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.api-card-body {
+  color: var(--color-text-muted);
+}
+
+.api-card-services {
+  margin-top: var(--spacing-sm);
+}
+
+.api-card-services strong {
+  display: block;
+  margin-bottom: var(--spacing-xs);
+  color: var(--color-text);
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.api-card-services ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+}
+
+.api-card-services li {
+  background: var(--color-bg-hover);
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-family: monospace;
+  color: var(--color-text);
+}
+
+.api-card-types {
+  font-style: italic;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+@media (max-width: 768px) {
+  .api-cards-grid {
+    grid-template-columns: 1fr;
+  }
+}
