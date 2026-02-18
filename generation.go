@@ -96,7 +96,7 @@ func VersionsAtCommit(id plumbing.Hash, versions []*ModuleVersion) []*ModuleVers
 
 func Generate(
 	ctx context.Context, outDir string, basePath string, conf Config,
-	uiPrintln func(format string, a ...any),
+	schemaPrerelease bool, uiPrintln func(format string, a ...any),
 ) error {
 	apiConf := make(map[string]APIConfig)
 	modules := make(map[string]*Module)
@@ -212,7 +212,7 @@ func Generate(
 
 		var schemaCommit *object.Commit
 
-		_, schemaCommit, schemaTag, err = cloneSchemaRepo(*conf.Schemas)
+		_, schemaCommit, schemaTag, err = cloneSchemaRepo(*conf.Schemas, schemaPrerelease)
 		if err != nil {
 			return fmt.Errorf("clone schema repo: %w", err)
 		}

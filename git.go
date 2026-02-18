@@ -17,7 +17,7 @@ import (
 
 // cloneAndFindLatestTag clones a repo into memory and finds the latest
 // non-prerelease semver tag. Returns the repo, latest stable commit, and tag name.
-func cloneAndFindLatestTag(cloneURL string) (*git.Repository, *object.Commit, string, error) {
+func cloneAndFindLatestTag(cloneURL string, allowPrerelease bool) (*git.Repository, *object.Commit, string, error) {
 	repo, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
 		URL:      cloneURL,
 		Progress: os.Stderr,
@@ -69,14 +69,14 @@ func cloneAndFindLatestTag(cloneURL string) (*git.Repository, *object.Commit, st
 	slices.Reverse(versions)
 
 	for _, v := range versions {
-		if v.Version.Prerelease() != "" {
+		if !allowPrerelease && v.Version.Prerelease() != "" {
 			continue
 		}
 
 		return repo, v.Commit, v.Tag, nil
 	}
 
-	return nil, nil, "", errors.New("no stable version tags found")
+	return nil, nil, "", errors.New("no version tags found")
 }
 
 func newModule(mod ModuleConfig) (*Module, error) {
@@ -160,13 +160,13 @@ func newModule(mod ModuleConfig) (*Module, error) {
 
 // cloneSchemaRepo clones the schema repository and returns the commit for
 // the latest stable version tag.
-func cloneSchemaRepo(conf SchemaGroupConfig) (*git.Repository, *object.Commit, string, error) {
+func cloneSchemaRepo(conf SchemaGroupConfig, allowPrerelease bool) (*git.Repository, *object.Commit, string, error) {
 	cloneURL := conf.Clone
 	if cloneURL == "" {
 		cloneURL = fmt.Sprintf("https://%s", conf.Repo)
 	}
 
-	return cloneAndFindLatestTag(cloneURL)
+	return cloneAndFindLatestTag(cloneURL, allowPrerelease)
 }
 
 func getChangelog(module *Module, api string) ([]*ModuleVersion, error) {

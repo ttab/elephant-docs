@@ -1480,6 +1480,12 @@ tbody tr:last-child td {
   border: 1px solid rgba(59, 130, 246, 0.2);
 }
 
+.tag-required {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
 .tag-optional {
   background: rgba(156, 163, 175, 0.1);
   color: var(--color-text-muted);

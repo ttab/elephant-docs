@@ -69,8 +69,8 @@
 {{- if .Deprecated }}{{ template "deprecation_notice" .Deprecated }}{{ end -}}
 {{- end }}
 
-{{/* Constraint map table - used for attributes and data. Takes ConstraintMap */}}
-{{ define "constraint_map_table" -}}
+{{/* Attribute constraint map table - shows "required" when not optional and not allow_empty */}}
+{{ define "attr_map_table" -}}
 {{- if .Keys -}}
 <div class="table-wrapper schema-field-table">
   <table>
@@ -94,6 +94,43 @@
           {{- end }}
         </td>
         <td data-label="Constraints">
+          {{- if and (not $sc.Optional) (not $sc.AllowEmpty) }}<span class="constraint-tag tag-required">required</span>{{ end -}}
+          {{ template "field_constraint_tags" $sc }}
+        </td>
+      </tr>
+      {{- end }}
+    </tbody>
+  </table>
+</div>
+{{- end -}}
+{{- end }}
+
+{{/* Data constraint map table - shows "required" when not optional */}}
+{{ define "data_map_table" -}}
+{{- if .Keys -}}
+<div class="table-wrapper schema-field-table">
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Constraints</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{- range .Keys }}
+      {{- $sc := index $.Constraints . }}
+      <tr>
+        <td data-label="Name">
+          <code>{{.}}</code>
+          {{- if $sc.Description }}
+          <div class="field-description">{{$sc.Description}}</div>
+          {{- end }}
+          {{- if $sc.Name }}
+          <div class="field-description">{{$sc.Name}}</div>
+          {{- end }}
+        </td>
+        <td data-label="Constraints">
+          {{- if not $sc.Optional }}<span class="constraint-tag tag-required">required</span>{{ end -}}
           {{ template "field_constraint_tags" $sc }}
         </td>
       </tr>
@@ -125,13 +162,13 @@
   {{- if $block.Attributes.Keys }}
   <div class="schema-subsection">
     <h5>Attributes</h5>
-    {{ template "constraint_map_table" $block.Attributes }}
+    {{ template "attr_map_table" $block.Attributes }}
   </div>
   {{- end }}
   {{- if $block.Data.Keys }}
   <div class="schema-subsection">
     <h5>Data</h5>
-    {{ template "constraint_map_table" $block.Data }}
+    {{ template "data_map_table" $block.Data }}
   </div>
   {{- end }}
   {{- if $block.Meta }}
@@ -182,13 +219,13 @@
   {{- if $block.Attributes.Keys }}
   <div class="schema-subsection">
     <h5>Attributes</h5>
-    {{ template "constraint_map_table" $block.Attributes }}
+    {{ template "attr_map_table" $block.Attributes }}
   </div>
   {{- end }}
   {{- if $block.Data.Keys }}
   <div class="schema-subsection">
     <h5>Data</h5>
-    {{ template "constraint_map_table" $block.Data }}
+    {{ template "data_map_table" $block.Data }}
   </div>
   {{- end }}
   {{- if $block.Meta }}
