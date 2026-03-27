@@ -131,26 +131,22 @@
           {{- if .OneOf }}
           <td data-label="Field" colspan="2">
             <div style="font-weight: 600; margin-bottom: 0.5rem;">One of:</div>
+            {{ template "doc" .Doc }}
             <div class="table-wrapper" style="margin: 0;">
               <table>
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Type</th>
-                  </tr>
-                </thead>
                 <tbody>
-                  {{- range $name, $type := .OneOf }}
-                  <tr id="field-{{$msgName}}.{{$name}}">
+                  {{- range .OneOf }}
+                  <tr id="field-{{$msgName}}.{{.Name}}">
                     <td data-label="Name">
-                      <div class="field-name-cell">
-                        {{$name}}
-                        <a href="#field-{{$msgName}}.{{$name}}" class="anchor-link" aria-label="Link to {{$msgName}}.{{$name}}">
+                      <div class="field-name-cell" style="font-weight: 600; margin-bottom: 0.25rem;">
+                        {{.Name}}
+                        <a href="#field-{{$msgName}}.{{.Name}}" class="anchor-link" aria-label="Link to {{$msgName}}.{{.Name}}">
                           <img src="{{base_path}}/assets/icons/link.svg" width="14" height="14" alt="">
                         </a>
                       </div>
+                      {{ template "doc" .Doc }}
                     </td>
-                    <td data-label="Type">{{ template "field_type" $type }}</td>
+                    <td data-label="Type">{{ template "field_type" .Type }}</td>
                   </tr>
                   {{- end }}
                 </tbody>
@@ -174,6 +170,8 @@
       </tbody>
     </table>
   </div>
+  {{ else }}
+  <p class="empty-message-notice">Empty message.</p>
   {{ end }}
 
   {{- with .Readme }}

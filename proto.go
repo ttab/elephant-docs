@@ -67,7 +67,13 @@ type ProtoField struct {
 	Name  string
 	Doc   []string
 	Type  FieldType
-	OneOf map[string]FieldType `json:",omitempty"`
+	OneOf []OneOfVariant `json:",omitempty"`
+}
+
+type OneOfVariant struct {
+	Name string
+	Doc  []string
+	Type FieldType
 }
 
 type FieldType struct {
@@ -241,23 +247,29 @@ func collectFields(msg *parser.Message) []ProtoField {
 			fields = append(fields, field)
 		case *parser.Oneof:
 			field := ProtoField{
-				Doc:   collectComments(o.Comments),
-				Name:  o.OneofName,
-				OneOf: make(map[string]FieldType),
+				Doc:  collectComments(o.Comments),
+				Name: o.OneofName,
 			}
 
 			for _, f := range o.OneofFields {
+				variant := OneOfVariant{
+					Name: f.FieldName,
+					Doc:  collectComments(f.Comments),
+				}
+
 				if scalars[f.Type] {
-					field.OneOf[f.FieldName] = FieldType{
+					variant.Type = FieldType{
 						Scalar: f.Type,
 					}
 				} else {
 					msg := createMessageRef(f.Type)
 
-					field.OneOf[f.FieldName] = FieldType{
+					variant.Type = FieldType{
 						Message: &msg,
 					}
 				}
+
+				field.OneOf = append(field.OneOf, variant)
 			}
 
 			fields = append(fields, field)

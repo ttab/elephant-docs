@@ -826,8 +826,18 @@ tbody tr:hover {
   background: var(--color-bg-hover);
 }
 
+tbody tr:has(> td[colspan]) {
+  background: transparent;
+}
+
 tbody tr:last-child td {
   border-bottom: none;
+}
+
+.empty-message-notice {
+  color: var(--color-text-muted);
+  font-style: italic;
+  padding: var(--spacing-md) var(--spacing-lg);
 }
 
 .method-cell {
