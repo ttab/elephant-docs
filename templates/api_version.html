@@ -55,8 +55,7 @@
       <thead>
         <tr>
           <th>Method</th>
-          <th>Request</th>
-          <th>Response</th>
+          <th>Details</th>
         </tr>
       </thead>
       <tbody>
@@ -76,9 +75,20 @@
                 {{ template "doc" .Doc }}
               </div>
               {{- end }}
-
+            </div>
+          </td>
+          <td data-label="Details">
+            <div class="method-details">
+              <div>
+                <strong>Request</strong><br>
+                {{ template "message_link" .Request }}
+              </div>
+              <div>
+                <strong>Response</strong><br>
+                {{ template "message_link" .Response }}
+              </div>
               {{- if .Readme }}
-              <div style="margin-top: 0.75rem;">
+              <div style="margin-top: 0.5rem;">
                 <a href="{{base_path}}/apis/{{$c.Name}}/{{$c.Version}}/methods/{{$service.Name}}/{{.Name}}/" class="btn btn-secondary" style="display: inline-flex;">
                   <img src="{{base_path}}/assets/icons/document.svg" width="16" height="16" alt="">
                   View Documentation
@@ -87,8 +97,6 @@
               {{- end }}
             </div>
           </td>
-          <td data-label="Request">{{ template "message_link" .Request }}</td>
-          <td data-label="Response">{{ template "message_link" .Response }}</td>
         </tr>
         {{- end }}
       </tbody>
