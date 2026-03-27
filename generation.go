@@ -23,7 +23,10 @@ import (
 	"github.com/go-git/go-git/v6/plumbing"
 	"github.com/go-git/go-git/v6/plumbing/object"
 	"github.com/ttab/elephant-docs/internal"
+	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
+	"github.com/alecthomas/chroma/v2/styles"
 	"github.com/yuin/goldmark"
+	highlighting "github.com/yuin/goldmark-highlighting/v2"
 	"golang.org/x/mod/modfile"
 	"golang.org/x/net/html"
 	"golang.org/x/sync/errgroup"
@@ -330,6 +333,11 @@ func Generate(
 			return fmt.Errorf("write assets directory: %w", err)
 		}
 
+		err = writeHighlightCSS(outDir)
+		if err != nil {
+			return fmt.Errorf("write highlight CSS: %w", err)
+		}
+
 		return nil
 	})
 
@@ -565,7 +573,17 @@ func renderMarkdownFile(filePath string, opts markdownOptions) (template.HTML, e
 func renderMarkdown(markdown []byte, opts markdownOptions) (template.HTML, error) {
 	var htmlBuf bytes.Buffer
 
-	err := goldmark.Convert(markdown, &htmlBuf)
+	md := goldmark.New(
+		goldmark.WithExtensions(
+			highlighting.NewHighlighting(
+				highlighting.WithFormatOptions(
+					chromahtml.WithClasses(true),
+				),
+			),
+		),
+	)
+
+	err := md.Convert(markdown, &htmlBuf)
 	if err != nil {
 		return "", fmt.Errorf("render markdown: %w", err)
 	}
@@ -602,6 +620,13 @@ func renderMarkdown(markdown []byte, opts markdownOptions) (template.HTML, error
 				continue
 			}
 
+			hasClass := slices.ContainsFunc(n.Attr, func(a html.Attribute) bool {
+				return a.Key == "class"
+			})
+			if hasClass {
+				continue
+			}
+
 			n.Attr = append(n.Attr, html.Attribute{
 				Key: "class",
 				Val: class,
@@ -617,6 +642,42 @@ func renderMarkdown(markdown []byte, opts markdownOptions) (template.HTML, error
 	}
 
 	return template.HTML(out.String()), nil
+}
+
+func writeHighlightCSS(outDir string) error {
+	cssPath := filepath.Join(outDir, "assets", "css", "syntax.css")
+
+	formatter := chromahtml.New(chromahtml.WithClasses(true))
+
+	var buf bytes.Buffer
+
+	err := formatter.WriteCSS(&buf, styles.Get("github"))
+	if err != nil {
+		return fmt.Errorf("write light syntax CSS: %w", err)
+	}
+
+	var darkBuf bytes.Buffer
+
+	err = formatter.WriteCSS(&darkBuf, styles.Get("monokai"))
+	if err != nil {
+		return fmt.Errorf("write dark syntax CSS: %w", err)
+	}
+
+	// Scope dark theme rules under the data-theme selector by
+	// prefixing every ".chroma" occurrence.
+	darkCSS := strings.ReplaceAll(
+		darkBuf.String(),
+		".chroma", "[data-theme=\"dark\"] .chroma",
+	)
+
+	buf.WriteString(darkCSS)
+
+	err = os.WriteFile(cssPath, buf.Bytes(), 0o644)
+	if err != nil {
+		return fmt.Errorf("write syntax CSS file: %w", err)
+	}
+
+	return nil
 }
 
 type MarkdownPage struct {
