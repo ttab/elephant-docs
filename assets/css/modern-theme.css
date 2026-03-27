@@ -750,13 +750,21 @@ img[src*="/icons/"] {
   margin-left: var(--spacing-sm);
 }
 
-.card-title:hover .anchor-link {
+.card-title:hover .anchor-link,
+.field-name-cell:hover .anchor-link,
+.schema-block-header:hover .anchor-link,
+.method-name:hover .anchor-link {
   opacity: 1;
 }
 
 .anchor-link:hover {
   color: var(--color-primary);
   transform: scale(1.1);
+}
+
+.field-name-cell {
+  display: inline-flex;
+  align-items: center;
 }
 
 /* ============================================

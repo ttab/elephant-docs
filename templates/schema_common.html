@@ -154,6 +154,11 @@
     {{- if $rb.Ref }}
     <a href="{{abs_url (print "/schemas/blocks/" $rb.BlockKind "/" (schema_slug $rb.Ref) "/")}}" class="block-ref-link" title="View block definition">{{$rb.Ref}}</a>
     {{- end }}
+    {{- if $block.Declares }}
+    <a href="#block-{{block_anchor $block}}" class="anchor-link" aria-label="Link to block">
+      <img src="{{base_path}}/assets/icons/link.svg" width="16" height="16" alt="">
+    </a>
+    {{- end }}
   </div>
   {{- if $block.Description }}
   <p class="schema-block-description">{{$block.Description}}</p>
