@@ -654,14 +654,14 @@ func writeHighlightCSS(outDir string) error {
 
 	var buf bytes.Buffer
 
-	err := formatter.WriteCSS(&buf, styles.Get("github"))
+	err := formatter.WriteCSS(&buf, styles.Get("catppuccin-latte"))
 	if err != nil {
 		return fmt.Errorf("write light syntax CSS: %w", err)
 	}
 
 	var darkBuf bytes.Buffer
 
-	err = formatter.WriteCSS(&darkBuf, styles.Get("monokai"))
+	err = formatter.WriteCSS(&darkBuf, styles.Get("nord"))
 	if err != nil {
 		return fmt.Errorf("write dark syntax CSS: %w", err)
 	}
