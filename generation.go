@@ -149,7 +149,10 @@ func Generate(
 				return targetUrl
 			}
 
-			return rootURL.JoinPath(targetUrl).String()
+			result := rootURL.JoinPath(target.Path)
+			result.Fragment = target.Fragment
+
+			return result.String()
 		},
 	}
 
@@ -881,7 +884,7 @@ func renderModuleVersionPages(
 							},
 							{
 								Title: service.Name,
-								HRef:  "/" + versionDir + "#service-" + service.Name,
+								HRef:  "/" + versionDir + "/#service-" + service.Name,
 							},
 							{
 								Title: method.Name,
