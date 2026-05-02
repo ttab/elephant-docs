@@ -1,6 +1,6 @@
 {{/* Schema badge - shows which constraint set contributed something */}}
 {{ define "schema_badge" -}}
-<span class="schema-badge">{{.}}</span>
+<span class="schema-badge" title="{{.}}">{{schema_short_name .}}</span>
 {{- end }}
 
 {{/* Block signature display - takes a BlockConstraint */}}

@@ -250,13 +250,26 @@ func enumDisplayName(e EnumDoc) string {
 	return e.ID
 }
 
+// schemaShortName returns the last two dot-separated parts of a schema name,
+// so reverse-domain names like "no.ntb.mediamanager" display as
+// "ntb.mediamanager". Names with two or fewer parts pass through unchanged.
+func schemaShortName(name string) string {
+	parts := strings.Split(name, ".")
+	if len(parts) <= 2 {
+		return name
+	}
+
+	return strings.Join(parts[len(parts)-2:], ".")
+}
+
 // schemaTemplateFuncs returns template functions for schema pages.
 func schemaTemplateFuncs() template.FuncMap {
 	return template.FuncMap{
-		"schema_slug":     SchemaSlug,
-		"schema_doc_name": docDisplayName,
-		"schema_enum_name": enumDisplayName,
-		"has_prefix":      strings.HasPrefix,
+		"schema_slug":       SchemaSlug,
+		"schema_doc_name":   docDisplayName,
+		"schema_enum_name":  enumDisplayName,
+		"schema_short_name": schemaShortName,
+		"has_prefix":        strings.HasPrefix,
 		"deref_int": func(p *int) int {
 			if p == nil {
 				return 0

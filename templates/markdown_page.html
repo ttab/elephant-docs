@@ -51,7 +51,7 @@
       {{- end }}
       {{- if .SetName }}
       <div style="margin-top: 0.5rem;">
-        <span class="schema-badge">{{.SetName}}</span>
+        {{ template "schema_badge" .SetName }}
       </div>
       {{- end }}
     </div>

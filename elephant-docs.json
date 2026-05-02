@@ -56,44 +56,64 @@
     "repo": "github.com/ttab/revisorschemas",
     "sets": [
       {
-        "name": "core",
+        "name": "se.ecms",
         "title": "Core",
-        "file": "core.json"
+        "file": "se.ecms.json"
       },
       {
-        "name": "core-planning",
+        "name": "se.ecms.planning",
         "title": "Core Planning",
-        "file": "core-planning.json"
+        "file": "se.ecms.planning.json"
       },
       {
-        "name": "core-metadoc",
+        "name": "se.ecms.metadoc",
         "title": "Core Metadoc",
-        "file": "core-metadoc.json"
+        "file": "se.ecms.metadoc.json"
       },
       {
-        "name": "core-genai",
+        "name": "se.ecms.genai",
         "title": "Core GenAI",
-        "file": "core-genai.json"
+        "file": "se.ecms.genai.json"
       },
       {
-        "name": "tt",
+        "name": "se.ecms.timeless",
+        "title": "Core Timeless",
+        "file": "se.ecms.timeless.json"
+      },
+      {
+        "name": "se.tt",
         "title": "TT",
-        "file": "tt.json"
+        "file": "se.tt.json"
       },
       {
-        "name": "tt-wires",
+        "name": "se.tt.wires",
         "title": "TT Wires",
-        "file": "tt-wires.json"
+        "file": "se.tt.wires.json"
       },
       {
-        "name": "tt-print",
+        "name": "se.tt.print",
         "title": "TT Print",
-        "file": "tt-print.json"
+        "file": "se.tt.print.json"
       },
       {
-        "name": "tt-planning",
+        "name": "se.tt.planning",
         "title": "TT Planning",
-        "file": "tt-planning.json"
+        "file": "se.tt.planning.json"
+      },
+      {
+        "name": "se.tt.eidos",
+        "title": "TT Eidos",
+        "file": "se.tt.eidos.json"
+      },
+      {
+        "name": "no.ntb",
+        "title": "NTB",
+        "file": "no.ntb.json"
+      },
+      {
+        "name": "no.ntb.mediamanager",
+        "title": "NTB MediaManager",
+        "file": "no.ntb.mediamanager.json"
       }
     ]
   }
