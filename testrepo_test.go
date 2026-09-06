@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-git/go-billy/v6/memfs"
 	"github.com/go-git/go-git/v6"
+	"github.com/go-git/go-git/v6/config"
 	"github.com/go-git/go-git/v6/plumbing/object"
 	"github.com/go-git/go-git/v6/storage/memory"
 )
@@ -30,6 +31,21 @@ func buildRepo(t *testing.T, commits ...testCommit) *git.Repository {
 	repo, err := git.Init(memory.NewStorage(), git.WithWorkTree(fs))
 	if err != nil {
 		t.Fatalf("init repository: %v", err)
+	}
+
+	// go-git resolves commit.gpgSign out to the system scope, so a
+	// developer who signs their own commits would otherwise fail every
+	// test that builds a fixture repository.
+	cfg, err := repo.Config()
+	if err != nil {
+		t.Fatalf("read the repository config: %v", err)
+	}
+
+	cfg.Commit.GpgSign = config.OptBoolFalse
+
+	err = repo.SetConfig(cfg)
+	if err != nil {
+		t.Fatalf("disable commit signing: %v", err)
 	}
 
 	wt, err := repo.Worktree()
