@@ -287,6 +287,21 @@ func parseProtocolGates(
 				name, pc.From, pc.Until)
 		}
 
+		// Connect is served from a version, never from the beginning of
+		// a module's history, and that version is what the tree check
+		// verifies. A bare "connect": {} would otherwise claim every
+		// version there has ever been and skip the check entirely.
+		if name == ProtocolConnect && gate.From == nil {
+			return nil, errors.New(
+				`protocol "connect": missing from, the first version whose deployed service serves Connect`)
+		}
+
+		if gate.From == nil && gate.Until == nil {
+			return nil, fmt.Errorf(
+				"protocol %q: neither from nor until, so the entry says nothing",
+				name)
+		}
+
 		gates = append(gates, gate)
 	}
 

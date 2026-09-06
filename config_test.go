@@ -69,6 +69,23 @@ func TestLoadConfigValidatesProtocols(t *testing.T) {
 			protocols: `{"connect": {"from": "v2.0.0", "until": "v1.0.0"}}`,
 			wantErr:   "is not before until",
 		},
+		{
+			// "always" would claim every version there has ever
+			// been and skip the check against the module tree.
+			name:      "connect without a from",
+			protocols: `{"connect": {}}`,
+			wantErr:   "missing from",
+		},
+		{
+			name:      "connect with only a note",
+			protocols: `{"connect": {"note": "soon"}}`,
+			wantErr:   "missing from",
+		},
+		{
+			name:      "an entry that says nothing",
+			protocols: `{"twirp": {"note": "still here"}}`,
+			wantErr:   "neither from nor until",
+		},
 	}
 
 	for _, c := range cases {
