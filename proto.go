@@ -4,10 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"path"
 	"strconv"
 	"strings"
 
 	"github.com/go-git/go-git/v6/plumbing/object"
+	"github.com/ttab/elephant-docs/internal"
 	"github.com/yoheimuta/go-protoparser/v4"
 	"github.com/yoheimuta/go-protoparser/v4/parser"
 )
@@ -16,7 +18,12 @@ type ProtoHandle struct {
 	API     string
 	Module  string
 	Version string
-	Proto   ProtoDeclarations
+	// Vendored marks a protobuf file read out of the module's vendored
+	// proto root. It resolves the imports of the module's own
+	// declarations and is never rendered as part of an API: the module it
+	// was copied out of is where it is documented.
+	Vendored bool
+	Proto    ProtoDeclarations
 }
 
 type ProtoDeclarations struct {
@@ -88,18 +95,77 @@ type MessageRef struct {
 	Message string
 }
 
+// apiTree opens an API's directory in a version tree. A module that keeps its
+// protobuf sources under a proto root is looked up there first, and in the
+// repository root after that, so that a module that moved its sources keeps
+// its older versions.
+//
+// The returned path is the directory the files were found in, which is also
+// the prefix the files are imported by.
+func apiTree(
+	tree *object.Tree, protoRoot string, api string,
+) (string, *object.Tree, error) {
+	candidates := []string{path.Join(protoRoot, api)}
+	if protoRoot != "" {
+		candidates = append(candidates, api)
+	}
+
+	for _, dir := range candidates {
+		sub, err := tree.Tree(dir)
+		if errors.Is(err, object.ErrDirectoryNotFound) {
+			continue
+		} else if err != nil {
+			return "", nil, fmt.Errorf(
+				"look up the %q directory: %w", dir, err)
+		}
+
+		return dir, sub, nil
+	}
+
+	return "", nil, nil
+}
+
+// vendorSkipPrefix is the path prefix, relative to an API directory, that
+// holds vendored protobuf files. The default vendor root is outside every API
+// directory, but the mage configuration allows moving it, and a vendored file
+// documented as part of an API would be both a duplicate declaration and an
+// unresolvable import.
+func vendorSkipPrefix(apiPath string, vendorRoot string) string {
+	if vendorRoot == "" {
+		return ""
+	}
+
+	if vendorRoot == apiPath {
+		// The whole API directory is the vendor root, which means
+		// there is nothing of the module's own in it.
+		return "/"
+	}
+
+	if !strings.HasPrefix(vendorRoot, apiPath+"/") {
+		return ""
+	}
+
+	return strings.TrimPrefix(vendorRoot, apiPath+"/") + "/"
+}
+
 func parseProtoFiles(
-	version *ModuleVersion, api string,
+	version *ModuleVersion, protoRoot string, vendorRoot string, api string,
 ) ([]ProtoDeclarations, error) {
 	tree, err := version.Commit.Tree()
 	if err != nil {
 		return nil, fmt.Errorf("get tag tree: %w", err)
 	}
 
-	apiDir, err := tree.Tree(api)
-	if errors.Is(err, object.ErrDirectoryNotFound) {
+	apiPath, apiDir, err := apiTree(tree, protoRoot, api)
+	if err != nil {
+		return nil, err
+	}
+
+	if apiDir == nil {
 		return nil, nil
 	}
+
+	skip := vendorSkipPrefix(apiPath, vendorRoot)
 
 	var protos []ProtoDeclarations
 
@@ -108,21 +174,16 @@ func parseProtoFiles(
 			return nil
 		}
 
-		r, err := f.Reader()
-		if err != nil {
-			return fmt.Errorf("open %q for reading: %w", f.Name, err)
+		if skip != "" && (skip == "/" || strings.HasPrefix(f.Name, skip)) {
+			return nil
 		}
 
-		defer r.Close()
-
-		pf, err := protoparser.Parse(r, protoparser.WithFilename(f.Name))
+		pd, err := parseProtoFile(f)
 		if err != nil {
-			return fmt.Errorf("parse %q: %w", f.Name, err)
+			return err
 		}
 
-		pd := createProtoDeclaration(pf)
-
-		pd.File = strings.Join([]string{api, f.Name}, "/")
+		pd.File = path.Join(apiPath, f.Name)
 
 		protos = append(protos, pd)
 
@@ -133,6 +194,58 @@ func parseProtoFiles(
 	}
 
 	return protos, nil
+}
+
+// parseVendoredProto reads an import out of the module's vendored proto root.
+// A repository that vendors a protobuf file from a module that isn't itself
+// documented here would otherwise fail the whole build on an unresolvable
+// import.
+func parseVendoredProto(
+	version *ModuleVersion, vendorRoot string, importPath string,
+) (*ProtoDeclarations, error) {
+	if vendorRoot == "" {
+		return nil, nil
+	}
+
+	tree, err := version.Commit.Tree()
+	if err != nil {
+		return nil, fmt.Errorf("get tag tree: %w", err)
+	}
+
+	f, err := tree.File(path.Join(vendorRoot, importPath))
+	if errors.Is(err, object.ErrFileNotFound) {
+		return nil, nil
+	} else if err != nil {
+		return nil, fmt.Errorf("look up the vendored %q: %w", importPath, err)
+	}
+
+	pd, err := parseProtoFile(f)
+	if err != nil {
+		return nil, err
+	}
+
+	// Indexed under the path it is imported by, which is the path it had
+	// in the repository it was vendored out of.
+	pd.File = importPath
+
+	return &pd, nil
+}
+
+func parseProtoFile(f *object.File) (_ ProtoDeclarations, outErr error) {
+	r, err := f.Reader()
+	if err != nil {
+		return ProtoDeclarations{}, fmt.Errorf(
+			"open %q for reading: %w", f.Name, err)
+	}
+
+	defer internal.Close(f.Name, r, &outErr)
+
+	pf, err := protoparser.Parse(r, protoparser.WithFilename(f.Name))
+	if err != nil {
+		return ProtoDeclarations{}, fmt.Errorf("parse %q: %w", f.Name, err)
+	}
+
+	return createProtoDeclaration(pf), nil
 }
 
 func createProtoDeclaration(pf *parser.Proto) ProtoDeclarations {

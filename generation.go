@@ -19,12 +19,12 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
+	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
+	"github.com/alecthomas/chroma/v2/styles"
 	"github.com/go-git/go-git/v6"
 	"github.com/go-git/go-git/v6/plumbing"
 	"github.com/go-git/go-git/v6/plumbing/object"
 	"github.com/ttab/elephant-docs/internal"
-	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
-	"github.com/alecthomas/chroma/v2/styles"
 	"github.com/yuin/goldmark"
 	highlighting "github.com/yuin/goldmark-highlighting/v2"
 	"golang.org/x/mod/modfile"
@@ -46,11 +46,21 @@ type API struct {
 	LatestVersion string
 	Data          APIData
 	Readme        template.HTML
+	// Protocols is the resolved protocol situation for this version of
+	// the API. Nil for the dependency APIs collected for cross
+	// references.
+	Protocols *ProtocolSet `json:",omitempty"`
 }
 
 type APIData struct {
 	Declarations []ProtoDeclarations
 	Dependencies map[string]API
+	// Vendored are the protobuf files the module vendors to resolve its
+	// own imports. They belong to the module they were copied out of, so
+	// they are never rendered as part of the API, but they have to be
+	// indexed: a request message can reference a vendored type, and the
+	// generated request body would otherwise be an empty object.
+	Vendored []ProtoDeclarations `json:"-"`
 }
 
 type MethodPage struct {
@@ -63,17 +73,47 @@ type MethodPage struct {
 	Response    MessageRef
 	Doc         []string
 	Readme      template.HTML
+	Protocols   *ProtocolSet `json:",omitempty"`
+	// RequestBody is a generated sample request body. It is rendered once
+	// per page and read from a file by every example.
+	RequestBody string
+	// RequestBodyFile is the name the examples give the request body.
+	RequestBodyFile string
+	// Examples are curl invocations, one per protocol and tenant.
+	Examples []MethodExample
+	// ExampleCSS shows the example that matches the reader's protocol and
+	// tenant, and is per page because which combinations have an example
+	// depends on what the tenants have deployed.
+	ExampleCSS template.CSS
 }
 
 type Module struct {
-	Title         string
-	Name          string
-	Repo          *git.Repository `json:"-"`
+	Title  string
+	Name   string
+	Config ModuleConfig    `json:"-"`
+	Repo   *git.Repository `json:"-"`
+
 	Versions      []*ModuleVersion
 	LatestVersion *ModuleVersion
 	VersionLookup map[string]*ModuleVersion `json:"-"`
 	APIs          map[string]APIConfig
 	Include       map[string]IncludeConfig
+}
+
+// APIPath is the directory an API's protobuf files live in, relative to the
+// repository root.
+func (m *Module) APIPath(api string) string {
+	return m.Config.APIPath(api)
+}
+
+// ProtoRoot is the directory the module's API directories live in.
+func (m *Module) ProtoRoot() string {
+	return m.Config.ProtoRoot
+}
+
+// VendorPath is the module's vendored proto root.
+func (m *Module) VendorPath() string {
+	return m.Config.VendorPath()
 }
 
 type ModuleVersion struct {
@@ -97,13 +137,13 @@ func VersionsAtCommit(id plumbing.Hash, versions []*ModuleVersion) []*ModuleVers
 	return l
 }
 
-func Generate(
-	ctx context.Context, outDir string, basePath string, conf Config,
-	schemaPrerelease bool, uiPrintln func(format string, a ...any),
-) error {
-	apiConf := make(map[string]APIConfig)
-	modules := make(map[string]*Module)
-
+// templateFuncs builds the site-wide template functions for a base path.
+//
+// The base path is applied in exactly one place, abs_url, and every link the
+// generator computes is therefore relative to the site root. base_path is the
+// same value for the templates that write a path out by hand; running one
+// through the other prefixes it twice.
+func templateFuncs(basePath string) (template.FuncMap, error) {
 	rootPath := basePath
 	if rootPath == "" {
 		rootPath = "/"
@@ -115,12 +155,10 @@ func Generate(
 
 	rootURL, err := url.Parse(rootPath)
 	if err != nil {
-		return fmt.Errorf("invalid base path: %w", err)
+		return nil, fmt.Errorf("invalid base path: %w", err)
 	}
 
-	tpl := template.New("templates")
-
-	funcs := template.FuncMap{
+	return template.FuncMap{
 		"message_href": func(ref MessageRef) string {
 			return fmt.Sprintf("#message-%s", ref.Message)
 		},
@@ -139,14 +177,14 @@ func Generate(
 		"base_path": func() string {
 			return basePath
 		},
-		"abs_url": func(targetUrl string) string {
-			target, err := url.Parse(targetUrl)
+		"abs_url": func(targetURL string) string {
+			target, err := url.Parse(targetURL)
 			if err != nil {
-				panic("bad URL: " + targetUrl)
+				panic("bad URL: " + targetURL)
 			}
 
 			if target.Scheme != "" {
-				return targetUrl
+				return targetURL
 			}
 
 			result := rootURL.JoinPath(target.Path)
@@ -154,7 +192,28 @@ func Generate(
 
 			return result.String()
 		},
+	}, nil
+}
+
+func Generate(
+	ctx context.Context, outDir string, basePath string, conf Config,
+	env Environments, schemaPrerelease bool,
+	uiPrintln func(format string, a ...any),
+) error {
+	apiConf := make(map[string]APIConfig)
+	modules := make(map[string]*Module)
+
+	err := env.Validate(conf)
+	if err != nil {
+		return fmt.Errorf("invalid environments: %w", err)
 	}
+
+	funcs, err := templateFuncs(basePath)
+	if err != nil {
+		return err
+	}
+
+	tpl := template.New("templates")
 
 	tpl.Funcs(funcs)
 
@@ -179,6 +238,22 @@ func Generate(
 		modules[module.Name] = module
 
 		maps.Copy(apiConf, mod.APIs)
+	}
+
+	for _, module := range modules {
+		err := checkAPIsArePresent(module)
+		if err != nil {
+			return fmt.Errorf("check the APIs of %s: %w",
+				module.Name, err)
+		}
+
+		err = checkProtocolGates(module, uiPrintln)
+		if err != nil {
+			return fmt.Errorf("check the protocol gates of %s: %w",
+				module.Name, err)
+		}
+
+		checkDeployedVersions(module, env, uiPrintln)
 	}
 
 	var apiMenu []MenuItem
@@ -314,11 +389,15 @@ func Generate(
 		apiMenu = append(apiMenu, schemaMenuItem)
 	}
 
-	// Prepend the home item.
+	// Prepend the home item and the protocol reference.
 	apiMenu = append([]MenuItem{
 		{
 			Title: "Home",
 			HRef:  "/",
+		},
+		{
+			Title: "Protocols",
+			HRef:  "/protocols",
 		},
 	}, apiMenu...)
 
@@ -359,7 +438,6 @@ func Generate(
 		var apiCards []APICard
 		for _, module := range modules {
 			version := module.LatestVersion
-			docCommit := version.Commit
 
 			// Use the latest docs from HEAD for the latest version
 			head, err := module.Repo.Head()
@@ -367,12 +445,10 @@ func Generate(
 				return fmt.Errorf("get repo head: %w", err)
 			}
 
-			c, err := module.Repo.CommitObject(head.Hash())
+			docCommit, err := module.Repo.CommitObject(head.Hash())
 			if err != nil {
 				return fmt.Errorf("get repo head commit: %w", err)
 			}
-
-			docCommit = c
 
 			apis, err := collectAPIData(modules, module, version, docCommit)
 			if err != nil {
@@ -440,6 +516,44 @@ func Generate(
 		return nil
 	})
 
+	// Render the protocol reference, which is the one page that documents
+	// the wire protocols rather than a service.
+	grp.Go(func() error {
+		localTpl, err := tpl.Clone()
+		if err != nil {
+			return fmt.Errorf("clone templates: %w", err)
+		}
+
+		html, err := renderMarkdownFile("docs/protocols.md", markdownOptions{})
+		if err != nil {
+			return fmt.Errorf("render protocols page contents: %w", err)
+		}
+
+		page := Page{
+			Title: "Protocols",
+			Menu:  markActive(apiMenu, "/protocols"),
+			Breadcrumb: []MenuItem{
+				{
+					Title: "Home",
+					HRef:  "/",
+				},
+				{
+					Title: "Protocols",
+				},
+			},
+			Contents: MarkdownPage{HTML: html},
+		}
+
+		err = renderPage(
+			filepath.Join(outDir, "protocols"),
+			localTpl, "site_page.html", page)
+		if err != nil {
+			return fmt.Errorf("render protocols page: %w", err)
+		}
+
+		return nil
+	})
+
 	// Queue the rendering of each module version.
 	grp.Go(func() error {
 		defer close(jobs)
@@ -468,7 +582,7 @@ func Generate(
 			for job := range jobs {
 				err := renderModuleVersionPages(
 					outDir, basePath, modules, job, tpl, funcs,
-					apiConf, apiMenu,
+					apiConf, apiMenu, env,
 				)
 				if err != nil {
 					return err
@@ -709,6 +823,7 @@ func renderModuleVersionPages(
 	funcs template.FuncMap,
 	apiConf map[string]APIConfig,
 	apiMenu []MenuItem,
+	env Environments,
 ) error {
 	module := job.Module
 	version := job.Version
@@ -777,6 +892,12 @@ func renderModuleVersionPages(
 			return fmt.Errorf("get api readme: %w", err)
 		}
 
+		// Resolved once per API and version, and handed to the version
+		// page and every one of its method pages, so that no template
+		// compares versions.
+		protocols := resolveProtocols(
+			api, conf, module, version, env)
+
 		d := API{
 			Name:          api,
 			Title:         conf.Title,
@@ -785,7 +906,18 @@ func renderModuleVersionPages(
 			LatestVersion: module.LatestVersion.Tag,
 			Data:          data,
 			Readme:        readme,
+			Protocols:     &protocols,
 		}
+
+		declSets := [][]ProtoDeclarations{data.Declarations}
+
+		for _, dep := range data.Dependencies {
+			declSets = append(declSets, dep.Data.Declarations)
+		}
+
+		declSets = append(declSets, data.Vendored)
+
+		index := newProtoIndex(declSets...)
 
 		apiDir := filepath.Join("apis", api)
 
@@ -801,9 +933,10 @@ func renderModuleVersionPages(
 		}
 
 		page := Page{
-			Title:    d.Title,
-			Menu:     markActive(apiMenu, "/"+apiDir),
-			Contents: d,
+			Title:     d.Title,
+			Menu:      markActive(apiMenu, "/"+apiDir),
+			Protocols: &protocols,
+			Contents:  d,
 			Breadcrumb: []MenuItem{
 				{
 					Title: "Home",
@@ -847,16 +980,25 @@ func renderModuleVersionPages(
 						continue
 					}
 
+					examples := methodExamples(
+						protocols, decl.Package,
+						service.Name, method.Name)
+
 					methodPage := MethodPage{
-						API:         api,
-						Version:     version.Tag,
-						Package:     decl.Package,
-						ServiceName: service.Name,
-						MethodName:  method.Name,
-						Request:     method.Request,
-						Response:    method.Response,
-						Doc:         method.Doc,
-						Readme:      method.Readme,
+						API:             api,
+						Version:         version.Tag,
+						Package:         decl.Package,
+						ServiceName:     service.Name,
+						MethodName:      method.Name,
+						Request:         method.Request,
+						Response:        method.Response,
+						Doc:             method.Doc,
+						Readme:          method.Readme,
+						Protocols:       &protocols,
+						RequestBody:     index.RequestSkeleton(method.Request),
+						RequestBodyFile: requestBodyFile,
+						Examples:        examples,
+						ExampleCSS:      exampleCSS(protocols, examples),
 					}
 
 					methodDir := filepath.Join(versionOutDir, "methods", service.Name, method.Name)
@@ -866,9 +1008,11 @@ func renderModuleVersionPages(
 					}
 
 					methodPageData := Page{
-						Title: method.Name,
-						Menu:  markActive(apiMenu, "/"+apiDir),
-						Contents: methodPage,
+						Title:     method.Name,
+						Menu:      markActive(apiMenu, "/"+apiDir),
+						Protocols: &protocols,
+						HeadCSS:   methodPage.ExampleCSS,
+						Contents:  methodPage,
 						Breadcrumb: []MenuItem{
 							{
 								Title: "Home",
@@ -958,7 +1102,7 @@ func renderAPILandingPages(
 
 	apiOutDir := filepath.Join(outDir, apiDir)
 
-	log, err := getChangelog(module, api)
+	log, err := getChangelog(module, module.ProtoRoot(), api)
 	if err != nil {
 		return fmt.Errorf("get module changelog: %w", err)
 	}
@@ -1232,7 +1376,8 @@ func collectAPIData(
 				dep.Version, dep.Module)
 		}
 
-		protos, err := parseProtoFiles(depVersion, dep.API)
+		protos, err := parseProtoFiles(depVersion,
+			depMod.ProtoRoot(), depMod.VendorPath(), dep.API)
 		if err != nil {
 			return nil, fmt.Errorf("parse files in dependency %q in %q: %w",
 				dep.API, dep.Module, err)
@@ -1251,7 +1396,8 @@ func collectAPIData(
 	apis := map[string][]ProtoDeclarations{}
 
 	for apiName := range module.APIs {
-		protos, err := parseProtoFiles(version, apiName)
+		protos, err := parseProtoFiles(version,
+			module.ProtoRoot(), module.VendorPath(), apiName)
 		if err != nil {
 			return nil, fmt.Errorf("parse proto files: %w", err)
 		}
@@ -1280,6 +1426,8 @@ func collectAPIData(
 			Declarations: protos,
 			Dependencies: make(map[string]API),
 		}
+
+		vendored := make(map[string]bool)
 
 		for _, p := range protos {
 			for i := range p.Services {
@@ -1337,7 +1485,39 @@ func collectAPIData(
 			for _, f := range p.Imports {
 				h, ok := files[f]
 				if !ok {
-					return nil, fmt.Errorf("missing dependency %q", f)
+					// A module can vendor a protobuf file
+					// from a module that isn't documented
+					// here. It resolves the import, but it
+					// is documented where it came from, so
+					// it is not a dependency of this API.
+					vh, err := vendoredHandle(
+						module, version, files, f)
+					if err != nil {
+						return nil, err
+					}
+
+					if vh == nil {
+						return nil, fmt.Errorf(
+							"missing dependency %q", f)
+					}
+
+					h = *vh
+				}
+
+				// A vendored file is cached in the same map, so
+				// the second API to import it finds it here.
+				// It belongs to the module it was copied out
+				// of, and registering it as a dependency would
+				// name an API that has no pages.
+				if h.Vendored {
+					if !vendored[h.Proto.File] {
+						vendored[h.Proto.File] = true
+
+						data.Vendored = append(
+							data.Vendored, h.Proto)
+					}
+
+					continue
 				}
 
 				data.Dependencies[h.Proto.Package] = API{
@@ -1357,6 +1537,97 @@ func collectAPIData(
 	}
 
 	return apiData, nil
+}
+
+// vendoredHandle resolves an import out of the module's vendored proto root
+// and indexes it, so that the same import in another file is only read once.
+// Returns nil when the module doesn't vendor the file.
+func vendoredHandle(
+	module *Module, version *ModuleVersion,
+	files map[string]ProtoHandle, importPath string,
+) (*ProtoHandle, error) {
+	pd, err := parseVendoredProto(version, module.VendorPath(), importPath)
+	if err != nil {
+		return nil, fmt.Errorf("read the vendored %q: %w", importPath, err)
+	}
+
+	if pd == nil {
+		return nil, nil
+	}
+
+	handle := ProtoHandle{
+		Module:   module.Name,
+		Version:  version.Tag,
+		Vendored: true,
+		Proto:    *pd,
+	}
+
+	files[importPath] = handle
+
+	return &handle, nil
+}
+
+// checkAPIsArePresent fails generation for a configured API that no version of
+// its module declares. Skipping a missing API per version is deliberate, since
+// an API is added at some point in a module's history, but an API that is
+// nowhere is a configuration error: it would silently vanish from the menu,
+// the home page and the version pages.
+func checkAPIsArePresent(module *Module) error {
+	for api := range module.APIs {
+		var found bool
+
+		for _, version := range module.Versions {
+			tree, err := version.Commit.Tree()
+			if err != nil {
+				return fmt.Errorf("get commit tree for %s: %w",
+					version.Tag, err)
+			}
+
+			_, dir, err := apiTree(tree, module.ProtoRoot(), api)
+			if err != nil {
+				return fmt.Errorf(
+					"look for %q in %s: %w", api, version.Tag, err)
+			}
+
+			if dir != nil {
+				found = true
+
+				break
+			}
+		}
+
+		if !found {
+			return fmt.Errorf(
+				"the API %q is not in any version of the module, looked in %q",
+				api, module.APIPath(api))
+		}
+	}
+
+	return nil
+}
+
+// checkDeployedVersions warns about an environments file that names a version
+// the module has never been tagged with. The row is still rendered, with the
+// version unlinked, but a deployment built against a commit rather than a
+// release is worth saying out loud when the site is built.
+func checkDeployedVersions(
+	module *Module, env Environments, uiPrintln func(format string, a ...any),
+) {
+	for _, tenant := range env.TenantNames() {
+		for api := range module.APIs {
+			for _, dep := range env.Deployments(tenant, api) {
+				_, ok := module.VersionLookup[dep.Version]
+				if ok {
+					continue
+				}
+
+				uiPrintln(
+					"warning: the environments file says %s runs %s %s, which is not a tag of %s",
+					tenant, dep.ServiceName(api),
+					dep.Version, module.Name)
+			}
+		}
+	}
 }
 
 type depSpec struct {
@@ -1384,6 +1655,7 @@ func readDepVersions(
 
 	rc, err := modF.Reader()
 	if err != nil {
+		return nil, fmt.Errorf("open go.mod for reading: %w", err)
 	}
 
 	defer func() {
