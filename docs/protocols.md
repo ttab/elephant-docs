@@ -25,10 +25,12 @@ every Connect client and proxy assumes and what the generated `Procedure`
 constants say. An ingress rule that routes on `/twirp/` needs a sibling rule
 for the unprefixed paths.
 
-A request whose `Content-Type` the server does not recognise is answered with a
-bare `415 Unsupported Media Type` and no body at all, on either protocol. There
-is no error code to read there, so a client that always parses the body has to
-handle an empty one.
+The two protocols answer a `Content-Type` the server does not recognise
+differently. Connect answers a bare `415 Unsupported Media Type` with no body at
+all, naming the types it accepts in an `Accept-Post` header; there is no error
+code to read, so a client that always parses a Connect error body has to handle
+an empty one. Twirp answers `404` with an ordinary Twirp error body, code
+`bad_route`, and the method and path in `meta.twirp_invalid_route`.
 
 ## JSON field names
 
