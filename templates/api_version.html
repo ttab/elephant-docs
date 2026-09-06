@@ -22,12 +22,74 @@
     </a>
   </div>
 
+  {{- with .Protocols }}
+  {{- range .Notices }}
+  <div class="protocol-notice">
+    {{ .Text }}
+    {{- if .HRef }}
+    <a href="{{ abs_url .HRef }}">{{ .LinkText }}</a>.
+    {{- end }}
+  </div>
+  {{- end }}
+  {{- range .Available }}
+  {{- if .Note }}
+  <div class="protocol-notice" data-protocol-block="{{ .Name }}">{{ .Note }}</div>
+  {{- end }}
+  {{- end }}
+  {{- end }}
+
   {{- with .Readme }}
   <div class="prose" style="margin-top: 2rem;">
     {{ . }}
   </div>
   {{- end }}
 </div>
+
+{{- with .Protocols }}
+{{- if .Deployments }}
+<h2 class="section-header">Deployed versions</h2>
+
+<div class="card">
+  <p class="text-muted-foreground text-sm">
+    The version each tenant runs in production, and the protocols it serves.
+    Staging runs the latest version.
+  </p>
+
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Tenant</th>
+          <th>Production version</th>
+          <th>Protocols</th>
+          <th>Host</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{- range .Deployments }}
+        <tr>
+          <td data-label="Tenant">{{ .Tenant }}</td>
+          {{- if .Deployed }}
+          <td data-label="Production version">
+            <a href="{{ abs_url (printf "/apis/%s/%s" $c.Protocols.API .Version) }}">{{ .Version }}</a>
+          </td>
+          <td data-label="Protocols">
+            {{- range .Protocols }}
+            <span class="protocol-badge">{{ . }}</span>
+            {{- end }}
+          </td>
+          <td data-label="Host"><code>{{ .ProdHost }}</code></td>
+          {{- else }}
+          <td data-label="Production version" colspan="3">Not deployed</td>
+          {{- end }}
+        </tr>
+        {{- end }}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{- end }}
+{{- end }}
 
 {{- range .Data.Declarations }}
 {{- $package := .Package }}
@@ -69,7 +131,10 @@
                   <img src="{{base_path}}/assets/icons/link.svg" width="16" height="16" alt="">
                 </a>
               </div>
-              <span class="method-endpoint">POST /twirp/{{$package}}.{{$service.Name}}/{{.Name}}</span>
+              {{- $method := . }}
+              {{- range $c.Protocols.Available }}
+              <span class="method-endpoint" data-protocol-block="{{.Name}}">POST {{.PathPrefix}}/{{$package}}.{{$service.Name}}/{{$method.Name}}</span>
+              {{- end }}
               {{- if .Doc }}
               <div class="method-description">
                 {{ template "doc" .Doc }}

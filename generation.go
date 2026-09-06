@@ -46,6 +46,10 @@ type API struct {
 	LatestVersion string
 	Data          APIData
 	Readme        template.HTML
+	// Protocols is the resolved protocol situation for this version of
+	// the API. Nil for the dependency APIs collected for cross
+	// references.
+	Protocols *ProtocolSet `json:",omitempty"`
 }
 
 type APIData struct {
@@ -63,6 +67,7 @@ type MethodPage struct {
 	Response    MessageRef
 	Doc         []string
 	Readme      template.HTML
+	Protocols   *ProtocolSet `json:",omitempty"`
 }
 
 type Module struct {
@@ -117,10 +122,16 @@ func VersionsAtCommit(id plumbing.Hash, versions []*ModuleVersion) []*ModuleVers
 
 func Generate(
 	ctx context.Context, outDir string, basePath string, conf Config,
-	schemaPrerelease bool, uiPrintln func(format string, a ...any),
+	env Environments, schemaPrerelease bool,
+	uiPrintln func(format string, a ...any),
 ) error {
 	apiConf := make(map[string]APIConfig)
 	modules := make(map[string]*Module)
+
+	err := env.Validate(conf)
+	if err != nil {
+		return fmt.Errorf("invalid environments: %w", err)
+	}
 
 	rootPath := basePath
 	if rootPath == "" {
@@ -205,6 +216,14 @@ func Generate(
 			return fmt.Errorf("check the APIs of %s: %w",
 				module.Name, err)
 		}
+
+		err = checkProtocolGates(module, uiPrintln)
+		if err != nil {
+			return fmt.Errorf("check the protocol gates of %s: %w",
+				module.Name, err)
+		}
+
+		checkDeployedVersions(module, env, uiPrintln)
 	}
 
 	var apiMenu []MenuItem
@@ -491,7 +510,7 @@ func Generate(
 			for job := range jobs {
 				err := renderModuleVersionPages(
 					outDir, basePath, modules, job, tpl, funcs,
-					apiConf, apiMenu,
+					apiConf, apiMenu, env,
 				)
 				if err != nil {
 					return err
@@ -732,6 +751,7 @@ func renderModuleVersionPages(
 	funcs template.FuncMap,
 	apiConf map[string]APIConfig,
 	apiMenu []MenuItem,
+	env Environments,
 ) error {
 	module := job.Module
 	version := job.Version
@@ -800,6 +820,12 @@ func renderModuleVersionPages(
 			return fmt.Errorf("get api readme: %w", err)
 		}
 
+		// Resolved once per API and version, and handed to the version
+		// page and every one of its method pages, so that no template
+		// compares versions.
+		protocols := resolveProtocols(
+			api, conf, module, version, env, basePath)
+
 		d := API{
 			Name:          api,
 			Title:         conf.Title,
@@ -808,6 +834,7 @@ func renderModuleVersionPages(
 			LatestVersion: module.LatestVersion.Tag,
 			Data:          data,
 			Readme:        readme,
+			Protocols:     &protocols,
 		}
 
 		apiDir := filepath.Join("apis", api)
@@ -824,9 +851,10 @@ func renderModuleVersionPages(
 		}
 
 		page := Page{
-			Title:    d.Title,
-			Menu:     markActive(apiMenu, "/"+apiDir),
-			Contents: d,
+			Title:     d.Title,
+			Menu:      markActive(apiMenu, "/"+apiDir),
+			Protocols: &protocols,
+			Contents:  d,
 			Breadcrumb: []MenuItem{
 				{
 					Title: "Home",
@@ -880,6 +908,7 @@ func renderModuleVersionPages(
 						Response:    method.Response,
 						Doc:         method.Doc,
 						Readme:      method.Readme,
+						Protocols:   &protocols,
 					}
 
 					methodDir := filepath.Join(versionOutDir, "methods", service.Name, method.Name)
@@ -889,9 +918,10 @@ func renderModuleVersionPages(
 					}
 
 					methodPageData := Page{
-						Title:    method.Name,
-						Menu:     markActive(apiMenu, "/"+apiDir),
-						Contents: methodPage,
+						Title:     method.Name,
+						Menu:      markActive(apiMenu, "/"+apiDir),
+						Protocols: &protocols,
+						Contents:  methodPage,
 						Breadcrumb: []MenuItem{
 							{
 								Title: "Home",
@@ -1465,6 +1495,29 @@ func checkAPIsArePresent(module *Module) error {
 	}
 
 	return nil
+}
+
+// checkDeployedVersions warns about an environments file that names a version
+// the module has never been tagged with, which would render a table row
+// linking to a page that doesn't exist.
+func checkDeployedVersions(
+	module *Module, env Environments, uiPrintln func(format string, a ...any),
+) {
+	for _, tenant := range env.TenantNames() {
+		for api := range module.APIs {
+			tag, ok := env.DeployedVersion(tenant, api)
+			if !ok {
+				continue
+			}
+
+			_, ok = module.VersionLookup[tag]
+			if !ok {
+				uiPrintln(
+					"warning: the environments file says %s runs %s %s, which is not a tag of %s",
+					tenant, api, tag, module.Name)
+			}
+		}
+	}
 }
 
 type depSpec struct {

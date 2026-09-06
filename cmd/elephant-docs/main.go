@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
 	elephantdocs "github.com/ttab/elephant-docs"
@@ -33,6 +34,11 @@ func main() {
 				TakesFile: true,
 			},
 			&cli.StringFlag{
+				Name:      "environments",
+				Usage:     "tenant deployment file, defaults to environments.json next to the config",
+				TakesFile: true,
+			},
+			&cli.StringFlag{
 				Name:  "serve",
 				Usage: "Serve documentation for local preview: -serve :8080",
 			},
@@ -53,11 +59,17 @@ func main() {
 func generateAction(ctx context.Context, cmd *cli.Command) error {
 	var (
 		configPath       = cmd.String("config")
+		envPath          = cmd.String("environments")
 		outDir           = cmd.String("out")
 		basePath         = cmd.String("base-path")
 		serveAddr        = cmd.String("serve")
 		schemaPrerelease = cmd.Bool("schema-prerelease")
 	)
+
+	if envPath == "" {
+		envPath = filepath.Join(
+			filepath.Dir(configPath), "environments.json")
+	}
 
 	start := time.Now()
 
@@ -76,7 +88,19 @@ func generateAction(ctx context.Context, cmd *cli.Command) error {
 		return fmt.Errorf("load config: %w", err)
 	}
 
-	err = elephantdocs.Generate(ctx, outDir, basePath, conf, schemaPrerelease, TUIPrintln)
+	env, err := elephantdocs.LoadEnvironments(envPath)
+	if err != nil {
+		return fmt.Errorf("load environments: %w", err)
+	}
+
+	if len(env.Tenants) == 0 {
+		TUIPrintln(
+			"no tenants in %s, rendering examples for the %s tenant",
+			envPath, elephantdocs.DefaultTenant)
+	}
+
+	err = elephantdocs.Generate(
+		ctx, outDir, basePath, conf, env, schemaPrerelease, TUIPrintln)
 	if err != nil {
 		return fmt.Errorf("generate documentation: %w", err)
 	}

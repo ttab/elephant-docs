@@ -10,11 +10,14 @@ go run ./cmd/elephant-docs -out static -serve :8080
 
 ## Configuration
 
-[`elephant-docs.json`](elephant-docs.json) declares the modules to clone, the
-APIs each one exposes and the document schema repository. It is read with
-`DisallowUnknownFields`, so a misspelled setting fails the build rather than
-being silently ignored, and the protocol gate versions are parsed and
-validated at load.
+Two files, both read from the working directory by default:
+
+* [`elephant-docs.json`](elephant-docs.json) declares the modules to clone,
+  the APIs each one exposes and the document schema repository. Unknown keys
+  are rejected, so a misspelled setting fails the build.
+* [`environments.json`](environments.json) records which version of each API a
+  tenant runs in production. Point at another one with `-environments`; the
+  default is `environments.json` next to the config file.
 
 ### Modules and APIs
 
@@ -50,6 +53,40 @@ walk and used to resolve imports that no configured module provides. A
 vendored file is never documented as part of an API: it belongs to the module
 it was copied out of.
 
-`protocols` declares from and until which module version the deployed service
-serves a protocol, and its versions are validated at load. An API with no
-`protocols` entry is documented as Twirp only.
+`protocols` is the protocol gate, and it is editorial. It says which versions
+of the declarations the *deployed* service serves a protocol from and until,
+which cannot be derived from the declarations themselves — a module tag
+carrying a Connect adapter says nothing about whether the running service
+mounts it. An API with no `protocols` entry is documented as Twirp only, which
+is how every API was documented before the gate existed.
+
+Generation guards the gate against the module tree: a `connect.from` naming a
+tag whose tree has no `<api>/<api>connect` directory is a hard error, and a
+`service.twirp.go` that survives past `twirp.until` is a warning.
+
+### Environments
+
+```json
+{
+  "tenants": {
+    "tt": {"apis": {"repository": "v0.24.2"}},
+    "ntb": {"apis": {"repository": "v0.24.2"}}
+  }
+}
+```
+
+The file is maintained by hand. The production host of an API is
+`https://<api>.api.<tenant>.ecms.se` and staging is
+`https://<api>.api.stage.<tenant>.ecms.se`; staging is assumed to run the
+module's latest version. An API absent from a tenant's map is not deployed for
+that tenant, and gets no row in the deployed versions table.
+
+## What the site renders
+
+Every version page and method page carries a resolved protocol set: the
+protocols that version is served over, the boundary notices around it, and the
+per tenant deployment table. The site header carries a protocol toggle and a
+tenant picker, both stored in `localStorage` and applied before first paint the
+way the theme is, with visibility driven by CSS off `data-protocol` and
+`data-tenant` on `<html>`. A version served over one protocol shows a static
+badge instead of a toggle.

@@ -1,0 +1,21 @@
+{
+  "tenants": {
+    "tt": {
+      "apis": {
+        "repository": "v0.24.2",
+        "index": "v0.24.2",
+        "spell": "v0.24.2",
+        "user": "v0.24.2",
+        "baboon": "v0.6.1",
+        "eidos": "v0.6.1",
+        "genai": "v0.6.1",
+        "ntb": "v0.6.1"
+      }
+    },
+    "ntb": {
+      "apis": {
+        "repository": "v0.24.2"
+      }
+    }
+  }
+}
