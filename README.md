@@ -59,27 +59,53 @@ carrying a Connect adapter says nothing about whether the running service
 mounts it. An API with no `protocols` entry is documented as Twirp only, which
 is how every API was documented before the gate existed.
 
-Generation guards the gate against the module tree: a `connect.from` naming a
-tag whose tree has no `<api>/<api>connect` directory is a hard error, and a
-`service.twirp.go` that survives past `twirp.until` is a warning.
+A `connect` entry has to carry a `from`: Connect is served from a version, and
+that version is what generation checks. Generation guards the gate against the
+module tree — a `connect.from` naming a tag whose tree has no
+`<api>/<api>connect` directory is a hard error, and a `service.twirp.go` that
+survives past `twirp.until` is a warning.
 
 ### Environments
 
 ```json
 {
   "tenants": {
-    "tt": {"apis": {"repository": "v0.24.1"}},
-    "ntb": {"apis": {"repository": "v0.24.1"}}
+    "tt": {"apis": {
+      "repository": {"version": "v0.24.1"},
+      "eidos": {"version": "v0.6.0", "service": "eidos2"}
+    }},
+    "ntb": {"apis": {
+      "ntb": [
+        {"version": "v0.5.0", "service": "ntb", "services": ["Nynorsk"]},
+        {"version": "v0.5.2", "service": "mediamanager",
+         "services": ["Media", "Metadata"]}
+      ]
+    }}
   }
 }
 ```
 
-The file is maintained by hand. The production host of an API is
-`https://<api>.api.<tenant>.ecms.se` and staging is
-`https://<api>.api.stage.<tenant>.ecms.se`; staging is assumed to run the
-module's latest version. An API absent from a tenant's map is not deployed for
-that tenant, and gets no row in the deployed versions table and no curl
-example for it.
+The file is maintained by hand, and it is what makes the protocol gate honest
+per environment: a tenant serves Connect for an API when the version it runs is
+at or past the API's `connect.from`.
+
+`version` is the version of the declarations module the deployed service was
+built against. `service` is the deployment name the host derives from, and
+defaults to the API name — it is only needed where the service is called
+something else, as the `eidos` API is served by `eidos2`. The production host is
+`https://<service>.api.<tenant>.ecms.se` and staging is
+`https://<service>.api.stage.<tenant>.ecms.se`; staging is assumed to run the
+module's latest version.
+
+An API that is served by more than one deployment is written as an array with
+one entry per deployment, and then each entry has to name the protobuf
+`services` it answers for. That is what lets a method page write its example
+against the host that actually serves the method.
+
+An API absent from a tenant's map is not deployed there. It still gets a row in
+the deployed versions table, saying `Not deployed`, so that a reader can see
+which tenants run it and which do not, and it gets no curl example for that
+tenant.
 
 ## What the site renders
 
@@ -89,15 +115,23 @@ per tenant deployment table. The site header carries a protocol toggle and a
 tenant picker, both stored in `localStorage` and applied before first paint the
 way the theme is, with the visibility of the endpoint lines and curl examples
 driven by CSS off `data-protocol` and `data-tenant` on `<html>`. A version
-served over one protocol shows a static badge instead of a toggle.
+served over one protocol shows a static badge instead of a toggle. The rules
+are generated into the page head, and a reader whose browser never runs the
+script — neither attribute set — is shown the default protocol and the default
+tenant rather than nothing.
 
-Method pages carry a curl example per protocol and tenant, for production and
-staging, with a request body generated from the request message
-(`skeleton.go`): protojson field names, a sample value per scalar type, one
-element per repeated field and map, the first non-zero enum value, and nested
-messages recursed with a depth limit and a cycle guard. The values are
-placeholders, not a request that will succeed.
+Method pages carry one curl invocation per protocol and tenant. A tenant whose
+deployed version does not serve the rendered protocol gets a one-line notice
+instead of a command, which is what keeps a dual-stack version page from
+telling a reader to post Connect at a tenant that is still on Twirp. The
+request body is the same for every protocol and tenant, so it is written once
+per page and the commands post it with `-d @request.json`. It is generated from
+the request message (`skeleton.go`): protojson field names, a sample value per
+scalar type, one element per repeated field and map, the first non-zero enum
+value, and nested messages recursed with a depth limit and a cycle guard. The
+values are placeholders, not a request that will succeed.
 
 `docs/protocols.md` is the site's protocol reference — paths, content types,
-error bodies and the HTTP status differences — rendered at `/protocols` and
-linked from the menu and the toggle.
+the JSON field-name difference between the two protocols, error bodies and the
+HTTP status differences — rendered at `/protocols` and linked from the menu and
+the toggle.

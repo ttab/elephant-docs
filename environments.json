@@ -2,22 +2,33 @@
   "tenants": {
     "tt": {
       "apis": {
-        "repository": "v0.22.3",
-        "index": "v0.18.1",
-        "spell": "v0.23.1-0.20260605063608-cd9379fcae57",
-        "user": "v0.24.2",
-        "replicant": "v0.22.2",
-        "baboon": "v0.5.2",
-        "eidos": "v0.6.0"
+        "repository": {"version": "v0.22.3"},
+        "index": {"version": "v0.18.1"},
+        "spell": {"version": "v0.23.1-0.20260605063608-cd9379fcae57"},
+        "user": {"version": "v0.24.2"},
+        "replicant": {"version": "v0.22.2"},
+        "baboon": {"version": "v0.5.2"},
+        "eidos": {"version": "v0.6.0", "service": "eidos2"}
       }
     },
     "ntb": {
       "apis": {
-        "repository": "v0.22.3",
-        "index": "v0.22.2",
-        "spell": "v0.22.1",
-        "user": "v0.24.2",
-        "ntb": "v0.5.0"
+        "repository": {"version": "v0.22.3"},
+        "index": {"version": "v0.22.2"},
+        "spell": {"version": "v0.22.1"},
+        "user": {"version": "v0.24.2"},
+        "ntb": [
+          {
+            "version": "v0.5.0",
+            "service": "ntb",
+            "services": ["Nynorsk"]
+          },
+          {
+            "version": "v0.5.2",
+            "service": "mediamanager",
+            "services": ["Media", "Metadata"]
+          }
+        ]
       }
     }
   }

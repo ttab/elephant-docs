@@ -24,10 +24,6 @@ type ProtocolInfo struct {
 	PathPrefix string
 	// Default marks the protocol a reader is shown first.
 	Default bool
-	// ContentType is the JSON content type for the protocol.
-	ContentType string
-	// BinaryContentType is the protobuf content type.
-	BinaryContentType string
 	// Headers are the headers a JSON request sets, in the order a curl
 	// example writes them.
 	Headers []ProtocolHeader
@@ -38,9 +34,8 @@ type ProtocolInfo struct {
 }
 
 type ProtocolHeader struct {
-	Name     string
-	Value    string
-	Optional bool
+	Name  string
+	Value string
 }
 
 // ProtocolNotice is a version boundary that the reader of this particular
@@ -51,26 +46,41 @@ type ProtocolNotice struct {
 	LinkText string
 }
 
-// TenantDeployment is one row of the deployed versions table.
+// TenantDeployment is one row of the deployed versions table: one service
+// that serves the API for one tenant. An API split across several deployments
+// gets a row per deployment.
 type TenantDeployment struct {
 	Tenant string
 	// Deployed is false when the API is absent from the tenant, which
 	// means it isn't deployed there.
 	Deployed bool
-	// Version is the module version the tenant runs in production.
+	// Service is the deployment name the host derives from.
+	Service string
+	// Services are the protobuf services this deployment serves, empty
+	// when it serves the whole API.
+	Services []string
+	// Version is the module version the deployment runs in production.
 	Version string
-	// HRef links to that version's page.
+	// HRef links to that version's page, relative to the site root. It is
+	// empty for a version that is not a tag of the module, which is what
+	// a service built against an unreleased commit reports.
 	HRef string
-	// Protocols are the protocols the deployed version serves.
+	// VersionNote says why an unlinked version has no page.
+	VersionNote string
+	// Protocols are the labels of the protocols the deployment serves.
 	Protocols []string
 	ProdHost  string
-	StageHost string
+
+	// protocols are the protocol names behind Protocols, which is what
+	// decides whether a method example can be written for this tenant.
+	protocols []string
 }
 
 // ProtocolSet is the resolved protocol situation for one version of one API.
 type ProtocolSet struct {
-	API     string
-	Version string
+	// API is the API the set belongs to, which is the host name to
+	// derive an example from when nothing is known about the tenants.
+	API string
 	// Default is the name of the protocol shown first.
 	Default string
 	// Available are the protocols this version is served over.
@@ -81,11 +91,11 @@ type ProtocolSet struct {
 	Deployments []TenantDeployment
 	// Tenants are the tenants examples are rendered for.
 	Tenants []string
-	// TenantCSS drives the tenant picker: one rule per tenant, so that
-	// switching tenant is a data attribute on <html> rather than script.
-	TenantCSS template.CSS
-	// DocHRef links to the site's protocol reference.
-	DocHRef string
+	// SelectionCSS shows the blocks that match the reader's protocol
+	// choice, so that switching protocol is a data attribute on <html>
+	// rather than script, and so that a reader without JavaScript sees
+	// the default protocol rather than nothing.
+	SelectionCSS template.CSS
 }
 
 // Multiple reports whether the reader has a choice to make.
@@ -107,49 +117,52 @@ func (ps ProtocolSet) PreferredTenant() string {
 	return DefaultTenant
 }
 
-// Has reports whether the set contains a protocol.
-func (ps ProtocolSet) Has(name string) bool {
-	for _, p := range ps.Available {
-		if p.Name == name {
-			return true
+// deployment is the tenant's deployment that serves a protobuf service.
+func (ps ProtocolSet) deployment(
+	tenant string, service string,
+) (TenantDeployment, bool) {
+	for _, d := range ps.Deployments {
+		if d.Tenant != tenant || !d.Deployed {
+			continue
+		}
+
+		if len(d.Services) == 0 || slices.Contains(d.Services, service) {
+			return d, true
 		}
 	}
 
-	return false
+	return TenantDeployment{}, false
 }
 
 func protocolTemplate(name string) ProtocolInfo {
 	switch name {
 	case ProtocolConnect:
 		return ProtocolInfo{
-			Name:              ProtocolConnect,
-			Label:             "Connect",
-			PathPrefix:        "",
-			ContentType:       "application/json",
-			BinaryContentType: "application/proto",
+			Name:       ProtocolConnect,
+			Label:      "Connect",
+			PathPrefix: "",
 			Headers: []ProtocolHeader{
 				{Name: "Authorization", Value: "Bearer $TOKEN"},
 				{Name: "Content-Type", Value: "application/json"},
-				{
-					Name:     "Connect-Protocol-Version",
-					Value:    "1",
-					Optional: true,
-				},
+				{Name: "Connect-Protocol-Version", Value: "1"},
 			},
-			Comment: "Connect-Protocol-Version is optional:" +
-				" curl and a plain fetch work without it.",
+			Comment: "Connect-Protocol-Version is optional, but has to be" +
+				" exactly 1 when it is set: curl and a plain fetch work" +
+				" without it. Responses use lowerCamelCase field names," +
+				" and requests are accepted with either spelling.",
 		}
 	case ProtocolTwirp:
 		return ProtocolInfo{
-			Name:              ProtocolTwirp,
-			Label:             "Twirp (legacy)",
-			PathPrefix:        "/twirp",
-			ContentType:       "application/json",
-			BinaryContentType: "application/protobuf",
+			Name:       ProtocolTwirp,
+			Label:      "Twirp (legacy)",
+			PathPrefix: "/twirp",
 			Headers: []ProtocolHeader{
 				{Name: "Authorization", Value: "Bearer $TOKEN"},
 				{Name: "Content-Type", Value: "application/json"},
 			},
+			Comment: "Twirp responses use the snake_case field names from" +
+				" the .proto file, and requests are accepted with either" +
+				" spelling.",
 		}
 	}
 
@@ -189,16 +202,14 @@ func protocolsAt(conf APIConfig, v *semver.Version) []string {
 	return available
 }
 
-// resolveProtocols builds the protocol set for one version of an API.
+// resolveProtocols builds the protocol set for one version of an API. Every
+// link it produces is relative to the site root: the templates run them
+// through abs_url, which is what prefixes the base path.
 func resolveProtocols(
 	api string, conf APIConfig, module *Module,
-	version *ModuleVersion, env Environments, basePath string,
+	version *ModuleVersion, env Environments,
 ) ProtocolSet {
-	set := ProtocolSet{
-		API:     api,
-		Version: version.Tag,
-		DocHRef: basePath + "/protocols",
-	}
+	set := ProtocolSet{API: api}
 
 	for i, name := range protocolsAt(conf, version.Version) {
 		info := protocolTemplate(name)
@@ -216,11 +227,11 @@ func resolveProtocols(
 		set.Default = set.Available[0].Name
 	}
 
-	set.Notices = protocolNotices(api, conf, module, version, basePath)
-	set.Deployments = tenantDeployments(api, conf, env, basePath)
+	set.Notices = protocolNotices(api, conf, module, version)
+	set.Deployments = tenantDeployments(api, conf, module, env)
 
 	for _, d := range set.Deployments {
-		if d.Deployed {
+		if d.Deployed && !slices.Contains(set.Tenants, d.Tenant) {
 			set.Tenants = append(set.Tenants, d.Tenant)
 		}
 	}
@@ -233,27 +244,26 @@ func resolveProtocols(
 		set.Deployments = nil
 	}
 
-	set.TenantCSS = tenantCSS(set.Tenants)
+	set.SelectionCSS = protocolCSS(set)
 
 	return set
 }
 
 func protocolNotices(
 	api string, conf APIConfig, module *Module,
-	version *ModuleVersion, basePath string,
+	version *ModuleVersion,
 ) []ProtocolNotice {
 	var notices []ProtocolNotice
 
 	versionHRef := func(tag string) string {
-		return fmt.Sprintf("%s/apis/%s/%s", basePath, api, tag)
+		return fmt.Sprintf("/apis/%s/%s", api, tag)
 	}
 
 	connect, hasConnect := conf.gate(ProtocolConnect)
 	if hasConnect && connect.From != nil && version.Version.LessThan(connect.From) {
 		notices = append(notices, ProtocolNotice{
-			Text: fmt.Sprintf(
-				"This version is served over Twirp only. Connect is available from %s.",
-				connect.FromTag),
+			Text: "This version is served over Twirp only." +
+				" Connect is available from",
 			HRef:     versionHRef(connect.FromTag),
 			LinkText: connect.FromTag,
 		})
@@ -300,102 +310,175 @@ func lastVersionWith(module *Module, conf APIConfig, protocol string) string {
 }
 
 func tenantDeployments(
-	api string, conf APIConfig, env Environments, basePath string,
+	api string, conf APIConfig, module *Module, env Environments,
 ) []TenantDeployment {
 	var deployments []TenantDeployment
 
 	for _, tenant := range env.TenantNames() {
-		d := TenantDeployment{
-			Tenant:    tenant,
-			ProdHost:  ProductionHost(tenant, api),
-			StageHost: StagingHost(tenant, api),
+		deps := env.Deployments(tenant, api)
+		if len(deps) == 0 {
+			deployments = append(deployments,
+				TenantDeployment{Tenant: tenant})
+
+			continue
 		}
 
-		tag, deployed := env.DeployedVersion(tenant, api)
-		if deployed {
-			d.Deployed = true
-			d.Version = tag
-			d.HRef = fmt.Sprintf("%s/apis/%s/%s", basePath, api, tag)
-
-			v, err := semver.NewVersion(tag)
-			if err == nil {
-				for _, name := range protocolsAt(conf, v) {
-					d.Protocols = append(d.Protocols,
-						protocolTemplate(name).Label)
-				}
-			}
+		for _, dep := range deps {
+			deployments = append(deployments,
+				tenantDeployment(api, conf, module, tenant, dep))
 		}
-
-		deployments = append(deployments, d)
 	}
 
 	return deployments
 }
 
-// tenantCSS renders the rules that show the blocks for the selected tenant.
-// Tenant names are validated at load, so they are safe to write into a
-// selector.
-func tenantCSS(tenants []string) template.CSS {
+func tenantDeployment(
+	api string, conf APIConfig, module *Module,
+	tenant string, dep APIDeployment,
+) TenantDeployment {
+	service := dep.ServiceName(api)
+
+	d := TenantDeployment{
+		Tenant:   tenant,
+		Deployed: true,
+		Service:  service,
+		Services: dep.Services,
+		Version:  dep.Version,
+		ProdHost: ProductionHost(tenant, service),
+	}
+
+	// A service can be built against a commit rather than a tag, and then
+	// there is no version page to link to. Say so rather than linking to a
+	// directory generation never writes.
+	if _, tagged := module.VersionLookup[dep.Version]; tagged {
+		d.HRef = fmt.Sprintf("/apis/%s/%s", api, dep.Version)
+	} else {
+		d.VersionNote = "not a release of " + module.Name +
+			", so it has no page here"
+	}
+
+	v, err := semver.NewVersion(dep.Version)
+	if err == nil {
+		for _, name := range protocolsAt(conf, v) {
+			d.protocols = append(d.protocols, name)
+			d.Protocols = append(d.Protocols,
+				protocolTemplate(name).Label)
+		}
+	}
+
+	return d
+}
+
+// protocolCSS renders the rules that hide the blocks belonging to a protocol
+// the reader hasn't selected. The rules only ever hide, so an element with no
+// protocol of its own is untouched, and the last rule is the no-JavaScript
+// fallback: nothing sets data-protocol then, and the default protocol is what
+// shows.
+func protocolCSS(set ProtocolSet) template.CSS {
 	var b strings.Builder
 
-	b.WriteString("[data-tenant-block]{display:none}")
-
-	for _, t := range tenants {
+	for _, p := range set.Available {
 		fmt.Fprintf(&b,
-			"html[data-tenant=%q] [data-tenant-block=%q]{display:revert}",
-			t, t)
+			"html[data-protocol=%q] [data-protocol-block]:not([data-protocol-block=%q]){display:none}",
+			p.Name, p.Name)
 	}
+
+	fmt.Fprintf(&b,
+		"html:not([data-protocol]) [data-protocol-block]:not([data-protocol-block=%q]){display:none}",
+		set.Default)
 
 	return template.CSS(b.String())
 }
 
-// ProtocolExamples are the curl examples for one method over one protocol,
-// one entry per tenant.
-type ProtocolExamples struct {
-	Protocol ProtocolInfo
-	Tenants  []TenantExample
+// requestBodyFile is what the generated curl invocations post. The request
+// body is the same for every protocol and tenant, so the page renders it once
+// and the commands read it from a file rather than carrying eight copies of a
+// message that runs to tens of kilobytes.
+const requestBodyFile = "request.json"
+
+// MethodExample is the invocation of one method for one protocol and one
+// tenant.
+type MethodExample struct {
+	Protocol string
+	Tenant   string
+	// Key is what the generated CSS matches to show this example when the
+	// reader picks the protocol and the tenant.
+	Key string
+	// Command is the curl invocation, empty when Notice is set.
+	Command string
+	// StagingHost is the host the same call goes to on staging, which is
+	// assumed to run the module's latest version.
+	StagingHost string
+	// Notice replaces the command when the tenant's deployment cannot be
+	// called this way, which is what keeps a method page from writing a
+	// Connect example for a tenant that is still on Twirp.
+	Notice string
 }
 
-// TenantExample is the production and staging invocation for one tenant.
-type TenantExample struct {
-	Tenant     string
-	Production string
-	Staging    string
+func exampleKey(protocol string, tenant string) string {
+	return protocol + "|" + tenant
 }
 
-// methodExamples renders a curl invocation per protocol, tenant and
-// environment. Staging is assumed to run the module's latest version, so it
-// is shown for every protocol the rendered version offers.
+// methodExamples renders one invocation per protocol and tenant. A tenant
+// whose deployed version doesn't serve the rendered protocol, or that doesn't
+// run the service at all, gets a one-line notice instead of a command that
+// would fail.
 func methodExamples(
-	set ProtocolSet, pkg string, service string, method string, body string,
-) []ProtocolExamples {
-	var examples []ProtocolExamples
+	set ProtocolSet, pkg string, service string, method string,
+) []MethodExample {
+	var examples []MethodExample
 
 	for _, p := range set.Available {
-		pe := ProtocolExamples{Protocol: p}
+		procedure := fmt.Sprintf("%s/%s.%s/%s",
+			p.PathPrefix, pkg, service, method)
 
 		for _, tenant := range set.Tenants {
-			procedure := fmt.Sprintf("%s/%s.%s/%s",
-				p.PathPrefix, pkg, service, method)
-
-			pe.Tenants = append(pe.Tenants, TenantExample{
-				Tenant: tenant,
-				Production: curlCommand(
-					ProductionHost(tenant, set.API)+procedure,
-					p, body),
-				Staging: curlCommand(
-					StagingHost(tenant, set.API)+procedure,
-					p, body),
-			})
+			examples = append(examples,
+				methodExample(set, p, tenant, service, procedure))
 		}
-
-		examples = append(examples, pe)
 	}
 
 	return examples
 }
 
-func curlCommand(url string, p ProtocolInfo, body string) string {
+func methodExample(
+	set ProtocolSet, p ProtocolInfo,
+	tenant string, service string, procedure string,
+) MethodExample {
+	e := MethodExample{
+		Protocol: p.Name,
+		Tenant:   tenant,
+		Key:      exampleKey(p.Name, tenant),
+	}
+
+	// Without an environments file there is nothing to check the example
+	// against, and the host is derived from the tenant name.
+	if len(set.Deployments) == 0 {
+		e.Command = curlCommand(
+			ProductionHost(tenant, set.API)+procedure, p)
+		e.StagingHost = StagingHost(tenant, set.API)
+
+		return e
+	}
+
+	d, ok := set.deployment(tenant, service)
+
+	switch {
+	case !ok:
+		e.Notice = fmt.Sprintf("%s does not run %s.", tenant, service)
+	case !slices.Contains(d.protocols, p.Name):
+		e.Notice = fmt.Sprintf(
+			"%s runs %s %s, which is not served over %s.",
+			tenant, d.Service, d.Version, p.Label)
+	default:
+		e.Command = curlCommand(d.ProdHost+procedure, p)
+		e.StagingHost = StagingHost(tenant, d.Service)
+	}
+
+	return e
+}
+
+func curlCommand(url string, p ProtocolInfo) string {
 	var b strings.Builder
 
 	fmt.Fprintf(&b, "curl %s \\\n", url)
@@ -404,9 +487,44 @@ func curlCommand(url string, p ProtocolInfo, body string) string {
 		fmt.Fprintf(&b, "  -H %q \\\n", h.Name+": "+h.Value)
 	}
 
-	fmt.Fprintf(&b, "  -d '%s'", body)
+	fmt.Fprintf(&b, "  -d @%s", requestBodyFile)
 
 	return b.String()
+}
+
+// exampleCSS renders the rules that show the one example matching the
+// reader's protocol and tenant, and hide the shared request body when that
+// combination has no command to run it with. The last two rules are the
+// no-JavaScript fallback, where neither attribute is set.
+func exampleCSS(set ProtocolSet, examples []MethodExample) template.CSS {
+	var b strings.Builder
+
+	preferred := exampleKey(set.Default, set.PreferredTenant())
+
+	for _, e := range examples {
+		fmt.Fprintf(&b,
+			"html[data-protocol=%q][data-tenant=%q] [data-example]:not([data-example=%q]){display:none}",
+			e.Protocol, e.Tenant, e.Key)
+
+		if e.Command != "" {
+			continue
+		}
+
+		fmt.Fprintf(&b,
+			"html[data-protocol=%q][data-tenant=%q] [data-example-body]{display:none}",
+			e.Protocol, e.Tenant)
+
+		if e.Key == preferred {
+			b.WriteString(
+				"html:not([data-protocol]) [data-example-body]{display:none}")
+		}
+	}
+
+	fmt.Fprintf(&b,
+		"html:not([data-protocol]) [data-example]:not([data-example=%q]){display:none}",
+		preferred)
+
+	return template.CSS(b.String())
 }
 
 // checkProtocolGates verifies the gate against the module tree: a claim that a

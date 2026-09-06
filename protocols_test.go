@@ -131,26 +131,39 @@ func TestResolveProtocolsNotices(t *testing.T) {
 	}, repo)
 
 	env := Environments{Tenants: map[string]TenantConfig{
-		"tt":  {APIs: map[string]string{"example": "v0.25.0"}},
-		"ntb": {APIs: map[string]string{}},
+		"tt":  {APIs: map[string]APIDeployments{"example": deployed("v0.25.0")}},
+		"ntb": {APIs: map[string]APIDeployments{}},
 	}}
 
 	before := resolveProtocols("example", conf, module,
-		module.VersionLookup["v0.24.0"], env, "")
+		module.VersionLookup["v0.24.0"], env)
 
 	if before.Default != ProtocolTwirp {
 		t.Errorf("got the default protocol %q before the gate, wanted twirp",
 			before.Default)
 	}
 
+	// The version is the link text, never repeated in the sentence: the
+	// template writes the text, the link and the full stop.
 	if len(before.Notices) != 1 ||
-		!strings.Contains(before.Notices[0].Text, "v0.25.0") {
-		t.Errorf("got the notices %v, wanted one naming v0.25.0",
+		before.Notices[0].LinkText != "v0.25.0" {
+		t.Errorf("got the notices %v, wanted one linking v0.25.0",
 			before.Notices)
 	}
 
+	if strings.Contains(before.Notices[0].Text, "v0.25.0") ||
+		strings.HasSuffix(before.Notices[0].Text, ".") {
+		t.Errorf("the notice text %q repeats the linked version",
+			before.Notices[0].Text)
+	}
+
+	if before.Notices[0].HRef != "/apis/example/v0.25.0" {
+		t.Errorf("got the notice link %q, wanted it relative to the site root",
+			before.Notices[0].HRef)
+	}
+
 	dual := resolveProtocols("example", conf, module,
-		module.VersionLookup["v0.25.0"], env, "")
+		module.VersionLookup["v0.25.0"], env)
 
 	if !dual.Multiple() || dual.Default != ProtocolConnect {
 		t.Errorf("got %d protocols defaulting to %q, wanted connect first",
@@ -177,7 +190,7 @@ func TestResolveProtocolsNotices(t *testing.T) {
 	}
 
 	after := resolveProtocols("example", conf, module,
-		module.VersionLookup["v1.0.0"], env, "")
+		module.VersionLookup["v1.0.0"], env)
 
 	if after.Multiple() || after.Default != ProtocolConnect {
 		t.Errorf("got %d protocols after the twirp removal, wanted connect only",
@@ -314,25 +327,228 @@ func TestMethodExamples(t *testing.T) {
 		Tenants:   []string{"tt"},
 	}
 
-	examples := methodExamples(set, "test.example", "Examples", "Get", `{}`)
+	examples := methodExamples(set, "test.example", "Examples", "Get")
 
-	if len(examples) != 1 || len(examples[0].Tenants) != 1 {
-		t.Fatalf("got %d protocol examples", len(examples))
+	if len(examples) != 1 {
+		t.Fatalf("got %d examples, wanted one", len(examples))
 	}
 
-	prod := examples[0].Tenants[0].Production
+	e := examples[0]
 
 	want := "curl https://example.api.tt.ecms.se/test.example.Examples/Get"
-	if !strings.HasPrefix(prod, want) {
-		t.Errorf("got the command %q, wanted it to start with %q", prod, want)
+	if !strings.HasPrefix(e.Command, want) {
+		t.Errorf("got the command %q, wanted it to start with %q",
+			e.Command, want)
 	}
 
-	if !strings.Contains(prod, "Connect-Protocol-Version: 1") {
-		t.Errorf("the connect example doesn't set the protocol version: %s", prod)
+	if !strings.Contains(e.Command, "Connect-Protocol-Version: 1") {
+		t.Errorf("the connect example doesn't set the protocol version: %s",
+			e.Command)
 	}
 
-	stage := examples[0].Tenants[0].Staging
-	if !strings.Contains(stage, "https://example.api.stage.tt.ecms.se/") {
-		t.Errorf("got the staging command %q", stage)
+	// The body is written once per page, so the command reads it from a
+	// file rather than carrying a copy.
+	if !strings.HasSuffix(e.Command, "-d @"+requestBodyFile) {
+		t.Errorf("the command doesn't post the shared body: %s", e.Command)
+	}
+
+	if e.StagingHost != "https://example.api.stage.tt.ecms.se" {
+		t.Errorf("got the staging host %q", e.StagingHost)
+	}
+}
+
+// A tenant that runs a version from before the gate must never be shown a
+// Connect example, which is what a method page would otherwise do the moment
+// one tenant is ahead of another.
+func TestMethodExamplesStraddlingTenants(t *testing.T) {
+	repo := buildRepo(t,
+		testCommit{
+			Tag: "v0.24.0",
+			Files: map[string]string{
+				"example/service.proto": serviceProto(
+					"test.example", "Examples"),
+			},
+		},
+		testCommit{
+			Tag: "v0.25.0",
+			Files: map[string]string{
+				"example/exampleconnect/service.connect.go": "package exampleconnect\n",
+			},
+		},
+	)
+
+	conf := gatedAPI(t, map[string]ProtocolConfig{
+		ProtocolConnect: {From: "v0.25.0"},
+	})
+
+	module := testModule(t, ModuleConfig{
+		Name: "example.test/module",
+		APIs: map[string]APIConfig{"example": conf},
+	}, repo)
+
+	// tt is past the gate, ntb is not.
+	env := Environments{Tenants: map[string]TenantConfig{
+		"tt":  {APIs: map[string]APIDeployments{"example": deployed("v0.25.0")}},
+		"ntb": {APIs: map[string]APIDeployments{"example": deployed("v0.24.0")}},
+	}}
+
+	set := resolveProtocols("example", conf, module,
+		module.VersionLookup["v0.25.0"], env)
+
+	if !slices.Equal(set.Tenants, []string{"tt", "ntb"}) {
+		t.Fatalf("got the example tenants %v", set.Tenants)
+	}
+
+	examples := methodExamples(set, "test.example", "Examples", "Get")
+
+	byKey := make(map[string]MethodExample, len(examples))
+	for _, e := range examples {
+		byKey[e.Key] = e
+	}
+
+	if len(byKey) != 4 {
+		t.Fatalf("got %d examples, wanted one per protocol and tenant",
+			len(byKey))
+	}
+
+	connectNTB := byKey[exampleKey(ProtocolConnect, "ntb")]
+	if connectNTB.Command != "" {
+		t.Errorf("a connect example was written for a tenant before the gate: %s",
+			connectNTB.Command)
+	}
+
+	if !strings.Contains(connectNTB.Notice, "v0.24.0") ||
+		!strings.Contains(connectNTB.Notice, "Connect") {
+		t.Errorf("got the notice %q, wanted the deployed version and protocol",
+			connectNTB.Notice)
+	}
+
+	for _, key := range []string{
+		exampleKey(ProtocolConnect, "tt"),
+		exampleKey(ProtocolTwirp, "tt"),
+		exampleKey(ProtocolTwirp, "ntb"),
+	} {
+		if byKey[key].Command == "" {
+			t.Errorf("%s got a notice rather than a command: %q",
+				key, byKey[key].Notice)
+		}
+	}
+
+	// The request body is hidden for the combination that has no command,
+	// and the default combination is the one a reader without JavaScript
+	// gets.
+	css := string(exampleCSS(set, examples))
+
+	if !strings.Contains(css,
+		`html[data-protocol="connect"][data-tenant="ntb"] [data-example-body]{display:none}`) {
+		t.Errorf("the body isn't hidden for the tenant without an example: %s",
+			css)
+	}
+
+	if !strings.Contains(css,
+		`html:not([data-protocol]) [data-example]:not([data-example="connect|tt"]){display:none}`) {
+		t.Errorf("there is no no-JavaScript fallback in %s", css)
+	}
+}
+
+// A split API is served by more than one deployment, and a method's example
+// has to be written for the host that answers for its service.
+func TestMethodExamplesSplitAPI(t *testing.T) {
+	repo := buildRepo(t, testCommit{
+		Tag: "v0.5.0",
+		Files: map[string]string{
+			"example/service.proto": serviceProto(
+				"test.example", "Examples"),
+		},
+	})
+
+	conf := gatedAPI(t, nil)
+
+	module := testModule(t, ModuleConfig{
+		Name: "example.test/module",
+		APIs: map[string]APIConfig{"example": conf},
+	}, repo)
+
+	env := Environments{Tenants: map[string]TenantConfig{
+		"tt": {APIs: map[string]APIDeployments{
+			"example": {
+				{
+					Version:  "v0.5.0",
+					Service:  "other",
+					Services: []string{"Other"},
+				},
+				{
+					Version:  "v0.5.0",
+					Service:  "examples",
+					Services: []string{"Examples"},
+				},
+			},
+		}},
+	}}
+
+	set := resolveProtocols("example", conf, module,
+		module.VersionLookup["v0.5.0"], env)
+
+	if len(set.Deployments) != 2 {
+		t.Fatalf("got %d deployment rows, wanted one per deployment",
+			len(set.Deployments))
+	}
+
+	if !slices.Equal(set.Tenants, []string{"tt"}) {
+		t.Errorf("got the example tenants %v, wanted tt once", set.Tenants)
+	}
+
+	examples := methodExamples(set, "test.example", "Examples", "Get")
+
+	if len(examples) != 1 {
+		t.Fatalf("got %d examples", len(examples))
+	}
+
+	if !strings.Contains(examples[0].Command,
+		"https://examples.api.tt.ecms.se/") {
+		t.Errorf("got the command %q, wanted the host of the deployment that serves the service",
+			examples[0].Command)
+	}
+
+	unserved := methodExamples(set, "test.example", "Missing", "Get")
+	if unserved[0].Notice == "" {
+		t.Error("a service no deployment answers for got an example")
+	}
+}
+
+// The deployed version of a service built against a commit rather than a tag
+// has no page, so the row names it without linking it.
+func TestTenantDeploymentUntaggedVersion(t *testing.T) {
+	repo := buildRepo(t, testCommit{
+		Tag: "v0.5.0",
+		Files: map[string]string{
+			"example/service.proto": serviceProto(
+				"test.example", "Examples"),
+		},
+	})
+
+	conf := gatedAPI(t, nil)
+
+	module := testModule(t, ModuleConfig{
+		Name: "example.test/module",
+		APIs: map[string]APIConfig{"example": conf},
+	}, repo)
+
+	env := Environments{Tenants: map[string]TenantConfig{
+		"tt": {APIs: map[string]APIDeployments{
+			"example": deployed("v0.5.1-0.20260605063608-cd9379fcae57"),
+		}},
+	}}
+
+	set := resolveProtocols("example", conf, module,
+		module.VersionLookup["v0.5.0"], env)
+
+	if set.Deployments[0].HRef != "" {
+		t.Errorf("an untagged version was linked to %q",
+			set.Deployments[0].HRef)
+	}
+
+	if set.Deployments[0].VersionNote == "" {
+		t.Error("an unlinked version was rendered without a note")
 	}
 }

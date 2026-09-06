@@ -1,5 +1,7 @@
 package elephantdocs
 
+import "html/template"
+
 type Page struct {
 	MetaTags   []map[string]string
 	Title      string
@@ -10,7 +12,11 @@ type Page struct {
 	// decides whether the header carries the protocol toggle and the
 	// tenant picker.
 	Protocols *ProtocolSet
-	Contents  any
+	// HeadCSS carries the rules that depend on the page's own contents
+	// rather than on the API, which is where the method pages put their
+	// example selection.
+	HeadCSS  template.CSS
+	Contents any
 }
 
 type MenuItem struct {

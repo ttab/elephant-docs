@@ -68,27 +68,36 @@
   <p class="text-muted-foreground text-sm">
     The request body is generated from
     {{ template "message_link" .Request }} and holds sample values, not a
-    request that will succeed.
+    request that will succeed. It is the same for every protocol and tenant,
+    so the page writes it once and the commands post it from
+    <code>{{ .RequestBodyFile }}</code>.
     {{- if gt (len .Protocols.Tenants) 1 }}
     Pick the tenant in the site header.
     {{- end }}
   </p>
 
   {{- range .Examples }}
-  <div data-protocol-block="{{ .Protocol.Name }}">
-    {{- range .Tenants }}
-    <div data-tenant-block="{{ .Tenant }}">
-      <h4 class="example-heading">Production</h4>
-      <pre class="example-command"><code>{{ .Production }}</code></pre>
-
-      <h4 class="example-heading">Staging</h4>
-      <pre class="example-command"><code>{{ .Staging }}</code></pre>
-    </div>
-    {{- end }}
-    {{- with .Protocol.Comment }}
-    <p class="text-muted-foreground text-sm">{{ . }}</p>
+  <div data-example="{{ .Key }}">
+    {{- if .Notice }}
+    <p class="protocol-notice">{{ .Notice }}</p>
+    {{- else }}
+    <pre class="example-command"><code>{{ .Command }}</code></pre>
+    <p class="text-muted-foreground text-sm">
+      The staging host is <code>{{ .StagingHost }}</code>.
+    </p>
     {{- end }}
   </div>
+  {{- end }}
+
+  <div data-example-body>
+    <h4 class="example-heading">{{ .RequestBodyFile }}</h4>
+    <pre class="example-command"><code>{{ .RequestBody }}</code></pre>
+  </div>
+
+  {{- range $p := .Protocols.Available }}
+  {{- with $p.Comment }}
+  <p class="text-muted-foreground text-sm" data-protocol-block="{{ $p.Name }}">{{ . }}</p>
+  {{- end }}
   {{- end }}
 </div>
 {{- end }}

@@ -74,10 +74,17 @@ type MethodPage struct {
 	Doc         []string
 	Readme      template.HTML
 	Protocols   *ProtocolSet `json:",omitempty"`
-	// RequestBody is a generated sample request body.
+	// RequestBody is a generated sample request body. It is rendered once
+	// per page and read from a file by every example.
 	RequestBody string
-	// Examples are curl invocations, per protocol and tenant.
-	Examples []ProtocolExamples
+	// RequestBodyFile is the name the examples give the request body.
+	RequestBodyFile string
+	// Examples are curl invocations, one per protocol and tenant.
+	Examples []MethodExample
+	// ExampleCSS shows the example that matches the reader's protocol and
+	// tenant, and is per page because which combinations have an example
+	// depends on what the tenants have deployed.
+	ExampleCSS template.CSS
 }
 
 type Module struct {
@@ -130,19 +137,13 @@ func VersionsAtCommit(id plumbing.Hash, versions []*ModuleVersion) []*ModuleVers
 	return l
 }
 
-func Generate(
-	ctx context.Context, outDir string, basePath string, conf Config,
-	env Environments, schemaPrerelease bool,
-	uiPrintln func(format string, a ...any),
-) error {
-	apiConf := make(map[string]APIConfig)
-	modules := make(map[string]*Module)
-
-	err := env.Validate(conf)
-	if err != nil {
-		return fmt.Errorf("invalid environments: %w", err)
-	}
-
+// templateFuncs builds the site-wide template functions for a base path.
+//
+// The base path is applied in exactly one place, abs_url, and every link the
+// generator computes is therefore relative to the site root. base_path is the
+// same value for the templates that write a path out by hand; running one
+// through the other prefixes it twice.
+func templateFuncs(basePath string) (template.FuncMap, error) {
 	rootPath := basePath
 	if rootPath == "" {
 		rootPath = "/"
@@ -154,12 +155,10 @@ func Generate(
 
 	rootURL, err := url.Parse(rootPath)
 	if err != nil {
-		return fmt.Errorf("invalid base path: %w", err)
+		return nil, fmt.Errorf("invalid base path: %w", err)
 	}
 
-	tpl := template.New("templates")
-
-	funcs := template.FuncMap{
+	return template.FuncMap{
 		"message_href": func(ref MessageRef) string {
 			return fmt.Sprintf("#message-%s", ref.Message)
 		},
@@ -178,14 +177,14 @@ func Generate(
 		"base_path": func() string {
 			return basePath
 		},
-		"abs_url": func(targetUrl string) string {
-			target, err := url.Parse(targetUrl)
+		"abs_url": func(targetURL string) string {
+			target, err := url.Parse(targetURL)
 			if err != nil {
-				panic("bad URL: " + targetUrl)
+				panic("bad URL: " + targetURL)
 			}
 
 			if target.Scheme != "" {
-				return targetUrl
+				return targetURL
 			}
 
 			result := rootURL.JoinPath(target.Path)
@@ -193,7 +192,28 @@ func Generate(
 
 			return result.String()
 		},
+	}, nil
+}
+
+func Generate(
+	ctx context.Context, outDir string, basePath string, conf Config,
+	env Environments, schemaPrerelease bool,
+	uiPrintln func(format string, a ...any),
+) error {
+	apiConf := make(map[string]APIConfig)
+	modules := make(map[string]*Module)
+
+	err := env.Validate(conf)
+	if err != nil {
+		return fmt.Errorf("invalid environments: %w", err)
 	}
+
+	funcs, err := templateFuncs(basePath)
+	if err != nil {
+		return err
+	}
+
+	tpl := template.New("templates")
 
 	tpl.Funcs(funcs)
 
@@ -876,7 +896,7 @@ func renderModuleVersionPages(
 		// page and every one of its method pages, so that no template
 		// compares versions.
 		protocols := resolveProtocols(
-			api, conf, module, version, env, basePath)
+			api, conf, module, version, env)
 
 		d := API{
 			Name:          api,
@@ -960,23 +980,25 @@ func renderModuleVersionPages(
 						continue
 					}
 
-					body := index.RequestSkeleton(method.Request)
+					examples := methodExamples(
+						protocols, decl.Package,
+						service.Name, method.Name)
 
 					methodPage := MethodPage{
-						API:         api,
-						Version:     version.Tag,
-						Package:     decl.Package,
-						ServiceName: service.Name,
-						MethodName:  method.Name,
-						Request:     method.Request,
-						Response:    method.Response,
-						Doc:         method.Doc,
-						Readme:      method.Readme,
-						Protocols:   &protocols,
-						RequestBody: body,
-						Examples: methodExamples(
-							protocols, decl.Package,
-							service.Name, method.Name, body),
+						API:             api,
+						Version:         version.Tag,
+						Package:         decl.Package,
+						ServiceName:     service.Name,
+						MethodName:      method.Name,
+						Request:         method.Request,
+						Response:        method.Response,
+						Doc:             method.Doc,
+						Readme:          method.Readme,
+						Protocols:       &protocols,
+						RequestBody:     index.RequestSkeleton(method.Request),
+						RequestBodyFile: requestBodyFile,
+						Examples:        examples,
+						ExampleCSS:      exampleCSS(protocols, examples),
 					}
 
 					methodDir := filepath.Join(versionOutDir, "methods", service.Name, method.Name)
@@ -989,6 +1011,7 @@ func renderModuleVersionPages(
 						Title:     method.Name,
 						Menu:      markActive(apiMenu, "/"+apiDir),
 						Protocols: &protocols,
+						HeadCSS:   methodPage.ExampleCSS,
 						Contents:  methodPage,
 						Breadcrumb: []MenuItem{
 							{
@@ -1584,23 +1607,24 @@ func checkAPIsArePresent(module *Module) error {
 }
 
 // checkDeployedVersions warns about an environments file that names a version
-// the module has never been tagged with, which would render a table row
-// linking to a page that doesn't exist.
+// the module has never been tagged with. The row is still rendered, with the
+// version unlinked, but a deployment built against a commit rather than a
+// release is worth saying out loud when the site is built.
 func checkDeployedVersions(
 	module *Module, env Environments, uiPrintln func(format string, a ...any),
 ) {
 	for _, tenant := range env.TenantNames() {
 		for api := range module.APIs {
-			tag, ok := env.DeployedVersion(tenant, api)
-			if !ok {
-				continue
-			}
+			for _, dep := range env.Deployments(tenant, api) {
+				_, ok := module.VersionLookup[dep.Version]
+				if ok {
+					continue
+				}
 
-			_, ok = module.VersionLookup[tag]
-			if !ok {
 				uiPrintln(
 					"warning: the environments file says %s runs %s %s, which is not a tag of %s",
-					tenant, api, tag, module.Name)
+					tenant, dep.ServiceName(api),
+					dep.Version, module.Name)
 			}
 		}
 	}

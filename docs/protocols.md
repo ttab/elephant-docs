@@ -7,9 +7,9 @@ protocol toggle in the site header decides which one the endpoints and
 examples on the API pages are written for.
 
 Both protocols are generated from the same `.proto` files, so the request and
-response messages, the field names and the JSON encoding are identical. What
-differs is the path, the content type, the shape of an error body and, for
-three codes, the HTTP status.
+response messages are the same messages with the same fields. What differs is
+the path, the content type, how the JSON spells a field name, the shape of an
+error body and, for three codes, the HTTP status.
 
 ## Paths and content types
 
@@ -25,27 +25,39 @@ every Connect client and proxy assumes and what the generated `Procedure`
 constants say. An ingress rule that routes on `/twirp/` needs a sibling rule
 for the unprefixed paths.
 
-JSON fields use the protobuf JSON mapping on both stacks: `lowerCamelCase`
-names, 64 bit integers as strings, `bytes` as base64. Fields at their default
-value are omitted from responses.
+A request whose `Content-Type` the server does not recognise is answered with a
+bare `415 Unsupported Media Type` and no body at all, on either protocol. There
+is no error code to read there, so a client that always parses the body has to
+handle an empty one.
+
+## JSON field names
+
+**The two protocols spell field names differently in responses.** Connect
+encodes with the protobuf JSON mapping and its defaults, so a field declared
+`document_uuid` comes back as `documentUuid`. Twirp encodes with the names from
+the `.proto` file, so the same field comes back as `document_uuid`. Everything
+else about the encoding is the same on both: 64 bit integers are strings,
+`bytes` is base64, and fields left at their default value are omitted from the
+response.
+
+Requests are accepted either way on both protocols, so a body written for one
+is a valid body for the other. The generated request bodies on the method pages
+use the `lowerCamelCase` spelling.
+
+The generated clients — Go, `@protobuf-ts`, connect-es — decode into the
+message type and are unaffected. Code that reads a raw `fetch` or `curl`
+response by field name is the code that has to change when it moves from
+`/twirp/` to the Connect path.
 
 ### Optional Connect headers
 
 Connect clients send two headers that the servers do not require:
 
-- `Connect-Protocol-Version: 1` identifies the protocol version. A plain
-  `curl` or `fetch` with `Content-Type: application/json` works without it.
+- `Connect-Protocol-Version` identifies the protocol version. A plain `curl` or
+  `fetch` with `Content-Type: application/json` works without it, but when it is
+  sent its value has to be exactly `1`; anything else is rejected.
 - `Connect-Timeout-Ms` sets a deadline, which becomes the handler's context
   deadline.
-
-### gRPC and gRPC-Web
-
-The Connect mount also serves gRPC and gRPC-Web on the same paths, selected by
-the request's content type. Nothing in the fleet calls a service that way yet,
-and the API pages document Connect and Twirp only, but a gRPC client generated
-from the same `.proto` file will reach a service that has the Connect mount. An
-ingress in front of the service has to allow HTTP/2 to the backend before an
-external gRPC caller can get through.
 
 ## Errors
 
@@ -110,6 +122,13 @@ service was built against, and the version pages say which versions those are.
 Each API page carries a deployed versions table, listing the version each
 tenant runs in production and the protocols that version serves. Staging runs
 the latest version.
+
+Tenants move at their own pace, so a version that is dual-stack in the
+declarations is not dual-stack everywhere. A method page writes a Connect
+example only for a tenant whose deployed version actually serves Connect, and
+says so in one line for the tenants that do not. An API served by more than one
+deployment — a few services are split that way — gets a row per deployment, and
+a method's example uses the host that answers for its service.
 
 An API that has not been migrated yet serves Twirp only, and its pages say so
 by showing no protocol choice.

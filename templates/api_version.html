@@ -52,7 +52,8 @@
 <div class="card">
   <p class="text-muted-foreground text-sm">
     The version each tenant runs in production, and the protocols it serves.
-    Staging runs the latest version.
+    Staging runs the latest version. An API served by more than one deployment
+    gets a row per deployment, naming the services it answers for.
   </p>
 
   <div class="table-wrapper">
@@ -71,7 +72,17 @@
           <td data-label="Tenant">{{ .Tenant }}</td>
           {{- if .Deployed }}
           <td data-label="Production version">
-            <a href="{{ abs_url (printf "/apis/%s/%s" $c.Protocols.API .Version) }}">{{ .Version }}</a>
+            {{- if .HRef }}
+            <a href="{{ abs_url .HRef }}">{{ .Version }}</a>
+            {{- else }}
+            {{ .Version }}
+            <div class="text-muted-foreground text-sm">{{ .VersionNote }}</div>
+            {{- end }}
+            {{- if .Services }}
+            <div class="text-muted-foreground text-sm">
+              serves {{ range $i, $s := .Services }}{{ if $i }}, {{ end }}{{ $s }}{{ end }}
+            </div>
+            {{- end }}
           </td>
           <td data-label="Protocols">
             {{- range .Protocols }}

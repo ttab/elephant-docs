@@ -1712,12 +1712,12 @@ td:has(.method-details) {
    Protocol toggle and tenant picker
    ============================================ */
 
-/* Which protocol's blocks are shown is decided by the data-protocol
-   attribute on <html>, which is set before first paint. */
-[data-protocol="connect"] [data-protocol-block="twirp"],
-[data-protocol="twirp"] [data-protocol-block="connect"] {
-  display: none;
-}
+/* Which protocol's and which tenant's blocks are shown is decided by the
+   data-protocol and data-tenant attributes on <html>, set before first paint.
+   Those rules are generated into the page head rather than written here: they
+   have to name the protocols and tenants the page actually offers, and to
+   fall back to the defaults for a reader whose browser never runs the script
+   that sets the attributes. */
 
 .protocol-controls {
   display: flex;
@@ -1749,8 +1749,12 @@ td:has(.method-details) {
   color: var(--color-text);
 }
 
+/* The last selector is the state a reader whose browser never ran the script
+   stays in: nothing has set data-protocol, and the default protocol is the
+   one whose blocks the generated rules show. */
 [data-protocol="connect"] .protocol-toggle button[data-protocol-option="connect"],
-[data-protocol="twirp"] .protocol-toggle button[data-protocol-option="twirp"] {
+[data-protocol="twirp"] .protocol-toggle button[data-protocol-option="twirp"],
+html:not([data-protocol]) .protocol-toggle button.protocol-default {
   background: var(--color-bg-elevated);
   color: var(--color-text);
   box-shadow: var(--shadow-xs);
