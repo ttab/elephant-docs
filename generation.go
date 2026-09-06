@@ -19,12 +19,12 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
+	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
+	"github.com/alecthomas/chroma/v2/styles"
 	"github.com/go-git/go-git/v6"
 	"github.com/go-git/go-git/v6/plumbing"
 	"github.com/go-git/go-git/v6/plumbing/object"
 	"github.com/ttab/elephant-docs/internal"
-	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
-	"github.com/alecthomas/chroma/v2/styles"
 	"github.com/yuin/goldmark"
 	highlighting "github.com/yuin/goldmark-highlighting/v2"
 	"golang.org/x/mod/modfile"
@@ -66,14 +66,32 @@ type MethodPage struct {
 }
 
 type Module struct {
-	Title         string
-	Name          string
-	Repo          *git.Repository `json:"-"`
+	Title  string
+	Name   string
+	Config ModuleConfig    `json:"-"`
+	Repo   *git.Repository `json:"-"`
+
 	Versions      []*ModuleVersion
 	LatestVersion *ModuleVersion
 	VersionLookup map[string]*ModuleVersion `json:"-"`
 	APIs          map[string]APIConfig
 	Include       map[string]IncludeConfig
+}
+
+// APIPath is the directory an API's protobuf files live in, relative to the
+// repository root.
+func (m *Module) APIPath(api string) string {
+	return m.Config.APIPath(api)
+}
+
+// ProtoRoot is the directory the module's API directories live in.
+func (m *Module) ProtoRoot() string {
+	return m.Config.ProtoRoot
+}
+
+// VendorPath is the module's vendored proto root.
+func (m *Module) VendorPath() string {
+	return m.Config.VendorPath()
 }
 
 type ModuleVersion struct {
@@ -179,6 +197,14 @@ func Generate(
 		modules[module.Name] = module
 
 		maps.Copy(apiConf, mod.APIs)
+	}
+
+	for _, module := range modules {
+		err := checkAPIsArePresent(module)
+		if err != nil {
+			return fmt.Errorf("check the APIs of %s: %w",
+				module.Name, err)
+		}
 	}
 
 	var apiMenu []MenuItem
@@ -359,7 +385,6 @@ func Generate(
 		var apiCards []APICard
 		for _, module := range modules {
 			version := module.LatestVersion
-			docCommit := version.Commit
 
 			// Use the latest docs from HEAD for the latest version
 			head, err := module.Repo.Head()
@@ -367,12 +392,10 @@ func Generate(
 				return fmt.Errorf("get repo head: %w", err)
 			}
 
-			c, err := module.Repo.CommitObject(head.Hash())
+			docCommit, err := module.Repo.CommitObject(head.Hash())
 			if err != nil {
 				return fmt.Errorf("get repo head commit: %w", err)
 			}
-
-			docCommit = c
 
 			apis, err := collectAPIData(modules, module, version, docCommit)
 			if err != nil {
@@ -866,8 +889,8 @@ func renderModuleVersionPages(
 					}
 
 					methodPageData := Page{
-						Title: method.Name,
-						Menu:  markActive(apiMenu, "/"+apiDir),
+						Title:    method.Name,
+						Menu:     markActive(apiMenu, "/"+apiDir),
 						Contents: methodPage,
 						Breadcrumb: []MenuItem{
 							{
@@ -958,7 +981,7 @@ func renderAPILandingPages(
 
 	apiOutDir := filepath.Join(outDir, apiDir)
 
-	log, err := getChangelog(module, api)
+	log, err := getChangelog(module, module.ProtoRoot(), api)
 	if err != nil {
 		return fmt.Errorf("get module changelog: %w", err)
 	}
@@ -1232,7 +1255,8 @@ func collectAPIData(
 				dep.Version, dep.Module)
 		}
 
-		protos, err := parseProtoFiles(depVersion, dep.API)
+		protos, err := parseProtoFiles(depVersion,
+			depMod.ProtoRoot(), depMod.VendorPath(), dep.API)
 		if err != nil {
 			return nil, fmt.Errorf("parse files in dependency %q in %q: %w",
 				dep.API, dep.Module, err)
@@ -1251,7 +1275,8 @@ func collectAPIData(
 	apis := map[string][]ProtoDeclarations{}
 
 	for apiName := range module.APIs {
-		protos, err := parseProtoFiles(version, apiName)
+		protos, err := parseProtoFiles(version,
+			module.ProtoRoot(), module.VendorPath(), apiName)
 		if err != nil {
 			return nil, fmt.Errorf("parse proto files: %w", err)
 		}
@@ -1337,7 +1362,23 @@ func collectAPIData(
 			for _, f := range p.Imports {
 				h, ok := files[f]
 				if !ok {
-					return nil, fmt.Errorf("missing dependency %q", f)
+					// A module can vendor a protobuf file
+					// from a module that isn't documented
+					// here. It resolves the import, but it
+					// is documented where it came from, so
+					// it is not a dependency of this API.
+					vh, err := vendoredHandle(
+						module, version, files, f)
+					if err != nil {
+						return nil, err
+					}
+
+					if vh == nil {
+						return nil, fmt.Errorf(
+							"missing dependency %q", f)
+					}
+
+					continue
 				}
 
 				data.Dependencies[h.Proto.Package] = API{
@@ -1357,6 +1398,73 @@ func collectAPIData(
 	}
 
 	return apiData, nil
+}
+
+// vendoredHandle resolves an import out of the module's vendored proto root
+// and indexes it, so that the same import in another file is only read once.
+// Returns nil when the module doesn't vendor the file.
+func vendoredHandle(
+	module *Module, version *ModuleVersion,
+	files map[string]ProtoHandle, importPath string,
+) (*ProtoHandle, error) {
+	pd, err := parseVendoredProto(version, module.VendorPath(), importPath)
+	if err != nil {
+		return nil, fmt.Errorf("read the vendored %q: %w", importPath, err)
+	}
+
+	if pd == nil {
+		return nil, nil
+	}
+
+	handle := ProtoHandle{
+		Module:   module.Name,
+		Version:  version.Tag,
+		Vendored: true,
+		Proto:    *pd,
+	}
+
+	files[importPath] = handle
+
+	return &handle, nil
+}
+
+// checkAPIsArePresent fails generation for a configured API that no version of
+// its module declares. Skipping a missing API per version is deliberate, since
+// an API is added at some point in a module's history, but an API that is
+// nowhere is a configuration error: it would silently vanish from the menu,
+// the home page and the version pages.
+func checkAPIsArePresent(module *Module) error {
+	for api := range module.APIs {
+		var found bool
+
+		for _, version := range module.Versions {
+			tree, err := version.Commit.Tree()
+			if err != nil {
+				return fmt.Errorf("get commit tree for %s: %w",
+					version.Tag, err)
+			}
+
+			_, dir, err := apiTree(tree, module.ProtoRoot(), api)
+			if err != nil {
+				return fmt.Errorf(
+					"look for %q in %s: %w", api, version.Tag, err)
+			}
+
+			if dir != nil {
+				found = true
+
+				break
+			}
+		}
+
+		if !found {
+			return fmt.Errorf(
+				"the API %q is not in any version of the module, looked in %q",
+				api, module.APIPath(api))
+		}
+	}
+
+	return nil
 }
 
 type depSpec struct {
@@ -1384,6 +1492,7 @@ func readDepVersions(
 
 	rc, err := modF.Reader()
 	if err != nil {
+		return nil, fmt.Errorf("open go.mod for reading: %w", err)
 	}
 
 	defer func() {

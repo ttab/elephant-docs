@@ -5,6 +5,7 @@ go 1.24.6
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/alecthomas/chroma/v2 v2.23.1
+	github.com/go-git/go-billy/v6 v6.0.0-20250627091229-31e2a16eef30
 	github.com/go-git/go-git/v6 v6.0.0-20250819122726-39261590f7f3
 	github.com/ttab/revisor v0.9.4
 	github.com/urfave/cli/v3 v3.6.2
@@ -26,7 +27,6 @@ require (
 	github.com/dlclark/regexp2 v1.11.5 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/go-git/gcfg/v2 v2.0.2 // indirect
-	github.com/go-git/go-billy/v6 v6.0.0-20250627091229-31e2a16eef30 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/google/uuid v1.6.0 // indirect

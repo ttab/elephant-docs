@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -18,8 +17,8 @@ func main() {
 		Action: generateAction,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:     "config",
-				Value:    "elephant-docs.json",
+				Name:      "config",
+				Value:     "elephant-docs.json",
 				TakesFile: true,
 			},
 			&cli.StringFlag{
@@ -72,16 +71,9 @@ func generateAction(ctx context.Context, cmd *cli.Command) error {
 		return fmt.Errorf("create output directory: %w", err)
 	}
 
-	var conf elephantdocs.Config
-
-	confData, err := os.ReadFile(configPath)
+	conf, err := elephantdocs.LoadConfig(configPath)
 	if err != nil {
-		return fmt.Errorf("read config file: %w", err)
-	}
-
-	err = json.Unmarshal(confData, &conf)
-	if err != nil {
-		return fmt.Errorf("unmarshal config: %w", err)
+		return fmt.Errorf("load config: %w", err)
 	}
 
 	err = elephantdocs.Generate(ctx, outDir, basePath, conf, schemaPrerelease, TUIPrintln)
