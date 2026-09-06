@@ -349,6 +349,66 @@ func tenantCSS(tenants []string) template.CSS {
 	return template.CSS(b.String())
 }
 
+// ProtocolExamples are the curl examples for one method over one protocol,
+// one entry per tenant.
+type ProtocolExamples struct {
+	Protocol ProtocolInfo
+	Tenants  []TenantExample
+}
+
+// TenantExample is the production and staging invocation for one tenant.
+type TenantExample struct {
+	Tenant     string
+	Production string
+	Staging    string
+}
+
+// methodExamples renders a curl invocation per protocol, tenant and
+// environment. Staging is assumed to run the module's latest version, so it
+// is shown for every protocol the rendered version offers.
+func methodExamples(
+	set ProtocolSet, pkg string, service string, method string, body string,
+) []ProtocolExamples {
+	var examples []ProtocolExamples
+
+	for _, p := range set.Available {
+		pe := ProtocolExamples{Protocol: p}
+
+		for _, tenant := range set.Tenants {
+			procedure := fmt.Sprintf("%s/%s.%s/%s",
+				p.PathPrefix, pkg, service, method)
+
+			pe.Tenants = append(pe.Tenants, TenantExample{
+				Tenant: tenant,
+				Production: curlCommand(
+					ProductionHost(tenant, set.API)+procedure,
+					p, body),
+				Staging: curlCommand(
+					StagingHost(tenant, set.API)+procedure,
+					p, body),
+			})
+		}
+
+		examples = append(examples, pe)
+	}
+
+	return examples
+}
+
+func curlCommand(url string, p ProtocolInfo, body string) string {
+	var b strings.Builder
+
+	fmt.Fprintf(&b, "curl %s \\\n", url)
+
+	for _, h := range p.Headers {
+		fmt.Fprintf(&b, "  -H %q \\\n", h.Name+": "+h.Value)
+	}
+
+	fmt.Fprintf(&b, "  -d '%s'", body)
+
+	return b.String()
+}
+
 // checkProtocolGates verifies the gate against the module tree: a claim that a
 // version serves Connect is refused when that version doesn't even carry the
 // generated adapters, and Twirp code that outlives its removal is a warning.

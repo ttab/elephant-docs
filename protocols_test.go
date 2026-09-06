@@ -305,3 +305,34 @@ func TestCheckProtocolGatesWarnsAboutTwirpCode(t *testing.T) {
 			warnings)
 	}
 }
+
+func TestMethodExamples(t *testing.T) {
+	set := ProtocolSet{
+		API:       "example",
+		Default:   ProtocolConnect,
+		Available: []ProtocolInfo{protocolTemplate(ProtocolConnect)},
+		Tenants:   []string{"tt"},
+	}
+
+	examples := methodExamples(set, "test.example", "Examples", "Get", `{}`)
+
+	if len(examples) != 1 || len(examples[0].Tenants) != 1 {
+		t.Fatalf("got %d protocol examples", len(examples))
+	}
+
+	prod := examples[0].Tenants[0].Production
+
+	want := "curl https://example.api.tt.ecms.se/test.example.Examples/Get"
+	if !strings.HasPrefix(prod, want) {
+		t.Errorf("got the command %q, wanted it to start with %q", prod, want)
+	}
+
+	if !strings.Contains(prod, "Connect-Protocol-Version: 1") {
+		t.Errorf("the connect example doesn't set the protocol version: %s", prod)
+	}
+
+	stage := examples[0].Tenants[0].Staging
+	if !strings.Contains(stage, "https://example.api.stage.tt.ecms.se/") {
+		t.Errorf("got the staging command %q", stage)
+	}
+}

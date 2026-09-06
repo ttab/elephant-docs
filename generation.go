@@ -68,6 +68,10 @@ type MethodPage struct {
 	Doc         []string
 	Readme      template.HTML
 	Protocols   *ProtocolSet `json:",omitempty"`
+	// RequestBody is a generated sample request body.
+	RequestBody string
+	// Examples are curl invocations, per protocol and tenant.
+	Examples []ProtocolExamples
 }
 
 type Module struct {
@@ -359,11 +363,15 @@ func Generate(
 		apiMenu = append(apiMenu, schemaMenuItem)
 	}
 
-	// Prepend the home item.
+	// Prepend the home item and the protocol reference.
 	apiMenu = append([]MenuItem{
 		{
 			Title: "Home",
 			HRef:  "/",
+		},
+		{
+			Title: "Protocols",
+			HRef:  "/protocols",
 		},
 	}, apiMenu...)
 
@@ -477,6 +485,44 @@ func Generate(
 		if err != nil {
 			return fmt.Errorf(
 				"render markdown page: %w", err)
+		}
+
+		return nil
+	})
+
+	// Render the protocol reference, which is the one page that documents
+	// the wire protocols rather than a service.
+	grp.Go(func() error {
+		localTpl, err := tpl.Clone()
+		if err != nil {
+			return fmt.Errorf("clone templates: %w", err)
+		}
+
+		html, err := renderMarkdownFile("docs/protocols.md", markdownOptions{})
+		if err != nil {
+			return fmt.Errorf("render protocols page contents: %w", err)
+		}
+
+		page := Page{
+			Title: "Protocols",
+			Menu:  markActive(apiMenu, "/protocols"),
+			Breadcrumb: []MenuItem{
+				{
+					Title: "Home",
+					HRef:  "/",
+				},
+				{
+					Title: "Protocols",
+				},
+			},
+			Contents: MarkdownPage{HTML: html},
+		}
+
+		err = renderPage(
+			filepath.Join(outDir, "protocols"),
+			localTpl, "site_page.html", page)
+		if err != nil {
+			return fmt.Errorf("render protocols page: %w", err)
 		}
 
 		return nil
@@ -837,6 +883,14 @@ func renderModuleVersionPages(
 			Protocols:     &protocols,
 		}
 
+		declSets := [][]ProtoDeclarations{data.Declarations}
+
+		for _, dep := range data.Dependencies {
+			declSets = append(declSets, dep.Data.Declarations)
+		}
+
+		index := newProtoIndex(declSets...)
+
 		apiDir := filepath.Join("apis", api)
 
 		versionDir := filepath.Join(
@@ -898,6 +952,8 @@ func renderModuleVersionPages(
 						continue
 					}
 
+					body := index.RequestSkeleton(method.Request)
+
 					methodPage := MethodPage{
 						API:         api,
 						Version:     version.Tag,
@@ -909,6 +965,10 @@ func renderModuleVersionPages(
 						Doc:         method.Doc,
 						Readme:      method.Readme,
 						Protocols:   &protocols,
+						RequestBody: body,
+						Examples: methodExamples(
+							protocols, decl.Package,
+							service.Name, method.Name, body),
 					}
 
 					methodDir := filepath.Join(versionOutDir, "methods", service.Name, method.Name)
