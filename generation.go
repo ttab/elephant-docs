@@ -55,6 +55,12 @@ type API struct {
 type APIData struct {
 	Declarations []ProtoDeclarations
 	Dependencies map[string]API
+	// Vendored are the protobuf files the module vendors to resolve its
+	// own imports. They belong to the module they were copied out of, so
+	// they are never rendered as part of the API, but they have to be
+	// indexed: a request message can reference a vendored type, and the
+	// generated request body would otherwise be an empty object.
+	Vendored []ProtoDeclarations `json:"-"`
 }
 
 type MethodPage struct {
@@ -889,6 +895,8 @@ func renderModuleVersionPages(
 			declSets = append(declSets, dep.Data.Declarations)
 		}
 
+		declSets = append(declSets, data.Vendored)
+
 		index := newProtoIndex(declSets...)
 
 		apiDir := filepath.Join("apis", api)
@@ -1396,6 +1404,8 @@ func collectAPIData(
 			Dependencies: make(map[string]API),
 		}
 
+		vendored := make(map[string]bool)
+
 		for _, p := range protos {
 			for i := range p.Services {
 				s := &p.Services[i]
@@ -1466,6 +1476,22 @@ func collectAPIData(
 					if vh == nil {
 						return nil, fmt.Errorf(
 							"missing dependency %q", f)
+					}
+
+					h = *vh
+				}
+
+				// A vendored file is cached in the same map, so
+				// the second API to import it finds it here.
+				// It belongs to the module it was copied out
+				// of, and registering it as a dependency would
+				// name an API that has no pages.
+				if h.Vendored {
+					if !vendored[h.Proto.File] {
+						vendored[h.Proto.File] = true
+
+						data.Vendored = append(
+							data.Vendored, h.Proto)
 					}
 
 					continue
