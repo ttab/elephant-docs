@@ -93,9 +93,16 @@ func newModule(mod ModuleConfig) (*Module, error) {
 		return nil, fmt.Errorf("git clone: %w", err)
 	}
 
+	return moduleFromRepo(mod, repo)
+}
+
+// moduleFromRepo collects the version tags of an already opened repository
+// into a module.
+func moduleFromRepo(mod ModuleConfig, repo *git.Repository) (*Module, error) {
 	module := Module{
 		Title:         mod.Title,
 		Name:          mod.Name,
+		Config:        mod,
 		Repo:          repo,
 		VersionLookup: make(map[string]*ModuleVersion),
 		APIs:          mod.APIs,
@@ -169,12 +176,21 @@ func cloneSchemaRepo(conf SchemaGroupConfig, allowPrerelease bool) (*git.Reposit
 	return cloneAndFindLatestTag(cloneURL, allowPrerelease)
 }
 
-func getChangelog(module *Module, api string) ([]*ModuleVersion, error) {
+// getChangelog collects the commits that touched an API, per version. The
+// proto root is the module's, so that a module that keeps its sources under
+// "rpc" gets a changelog instead of an empty page.
+func getChangelog(
+	module *Module, protoRoot string, api string,
+) ([]*ModuleVersion, error) {
 	if len(module.Versions) == 0 {
 		return nil, nil
 	}
 
 	versions := make([]*ModuleVersion, 0, len(module.Versions))
+
+	// The directory an API lives in can differ between versions, so every
+	// path it has been seen at filters the log.
+	var prefixes []string
 
 	// Semi-deep clone so that we don't pollute the shared Log slice.
 	for i := range module.Versions {
@@ -185,11 +201,17 @@ func getChangelog(module *Module, api string) ([]*ModuleVersion, error) {
 			return nil, fmt.Errorf("get commit tree: %w", err)
 		}
 
-		_, err = tree.Tree(api)
-		if errors.Is(err, object.ErrDirectoryNotFound) {
+		apiPath, apiDir, err := apiTree(tree, protoRoot, api)
+		if err != nil {
+			return nil, fmt.Errorf("look up the API directory: %w", err)
+		}
+
+		if apiDir == nil {
 			continue
-		} else if err != nil {
-			return nil, fmt.Errorf("failed to list files: %w", err)
+		}
+
+		if !slices.Contains(prefixes, apiPath+"/") {
+			prefixes = append(prefixes, apiPath+"/")
 		}
 
 		m.Log = nil
@@ -216,7 +238,7 @@ func getChangelog(module *Module, api string) ([]*ModuleVersion, error) {
 			var ok bool
 
 			for i := range names {
-				ok = strings.HasPrefix(names[i], api+"/")
+				ok = hasAnyPrefix(names[i], prefixes)
 				if ok {
 					inScope[c.Hash.String()] = true
 
@@ -259,6 +281,16 @@ func getChangelog(module *Module, api string) ([]*ModuleVersion, error) {
 	}
 
 	return versions, nil
+}
+
+func hasAnyPrefix(name string, prefixes []string) bool {
+	for _, p := range prefixes {
+		if strings.HasPrefix(name, p) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func isPrerelease(v *ModuleVersion) bool {

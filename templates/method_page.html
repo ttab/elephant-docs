@@ -1,6 +1,7 @@
 {{template "header" .}}
 
 {{- with .Contents }}
+{{- $m := . }}
 <div class="page-header">
   <div style="color: var(--color-text-muted); font-size: 0.875rem; margin-bottom: 0.5rem;">
     <a href="{{base_path}}/apis/{{.API}}/{{.Version}}#service-{{.ServiceName}}" style="color: var(--color-link);">{{.ServiceName}}</a>
@@ -26,7 +27,11 @@
         <tr>
           <td style="font-weight: 600; width: 150px;">Endpoint</td>
           <td>
-            <code style="font-size: 0.875rem;">POST /twirp/{{.Package}}.{{.ServiceName}}/{{.MethodName}}</code>
+            {{- range .Protocols.Available }}
+            <div data-protocol-block="{{.Name}}">
+              <code style="font-size: 0.875rem;">POST {{.PathPrefix}}/{{$m.Package}}.{{$m.ServiceName}}/{{$m.MethodName}}</code>
+            </div>
+            {{- end }}
           </td>
         </tr>
         <tr>
@@ -53,6 +58,49 @@
     </table>
   </div>
 </div>
+
+{{- if .Examples }}
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">Example request</h3>
+  </div>
+
+  <p class="text-muted-foreground text-sm">
+    The request body is generated from
+    {{ template "message_link" .Request }} and holds sample values, not a
+    request that will succeed. It is the same for every protocol and tenant,
+    so the page writes it once and the commands post it from
+    <code>{{ .RequestBodyFile }}</code>.
+    {{- if gt (len .Protocols.Tenants) 1 }}
+    Pick the tenant in the site header.
+    {{- end }}
+  </p>
+
+  {{- range .Examples }}
+  <div data-example="{{ .Key }}">
+    {{- if .Notice }}
+    <p class="protocol-notice">{{ .Notice }}</p>
+    {{- else }}
+    <pre class="example-command"><code>{{ .Command }}</code></pre>
+    <p class="text-muted-foreground text-sm">
+      The staging host is <code>{{ .StagingHost }}</code>.
+    </p>
+    {{- end }}
+  </div>
+  {{- end }}
+
+  <div data-example-body>
+    <h4 class="example-heading">{{ .RequestBodyFile }}</h4>
+    <pre class="example-command"><code>{{ .RequestBody }}</code></pre>
+  </div>
+
+  {{- range $p := .Protocols.Available }}
+  {{- with $p.Comment }}
+  <p class="text-muted-foreground text-sm" data-protocol-block="{{ $p.Name }}">{{ . }}</p>
+  {{- end }}
+  {{- end }}
+</div>
+{{- end }}
 
 {{- if .Readme }}
 <div class="card">

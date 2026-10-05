@@ -1,0 +1,7 @@
+{{template "header" .}}
+<div class="prose">
+  {{- with .Contents.HTML }}
+  {{ . }}
+  {{- end }}
+</div>
+{{template "footer" .}}

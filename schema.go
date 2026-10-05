@@ -42,7 +42,7 @@ type DocumentDoc struct {
 
 // ResolvedBlock tracks where each block constraint came from.
 type ResolvedBlock struct {
-	Source     string // which set contributed this
+	Source    string // which set contributed this
 	Ref       string // non-empty if from a ref
 	Block     revisor.BlockConstraint
 	BlockKind string // "meta", "link", or "content"
@@ -118,7 +118,11 @@ func loadConstraintSets(commit *object.Commit, conf SchemaGroupConfig) ([]reviso
 
 		err = dec.Decode(&cs)
 
-		reader.Close()
+		closeErr := reader.Close()
+		if closeErr != nil {
+			return nil, fmt.Errorf("close schema %q: %w",
+				sc.File, closeErr)
+		}
 
 		if err != nil {
 			return nil, fmt.Errorf("decode schema %q: %w", sc.File, err)

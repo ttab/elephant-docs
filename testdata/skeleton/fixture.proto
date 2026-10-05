@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package test.fixture;
+
+import "google/protobuf/timestamp.proto";
+
+message Scalars {
+  string text = 1;
+  bool flag = 2;
+  int32 count = 3;
+  int64 big_count = 4;
+  double ratio = 5;
+  bytes payload = 6;
+  uint64 offset_in_log = 7;
+}
+
+message Collections {
+  repeated string tags = 1;
+  map<string, string> labels = 2;
+  map<int32, Scalars> indexed = 3;
+  repeated Scalars items = 4;
+}
+
+enum Status {
+  STATUS_UNSPECIFIED = 0;
+  STATUS_ACTIVE = 1;
+  STATUS_DONE = 2;
+}
+
+message WithEnum {
+  Status status = 1;
+  repeated Status history = 2;
+}
+
+message WellKnown {
+  google.protobuf.Timestamp created = 1;
+}
+
+message Cyclic {
+  string id = 1;
+  Cyclic parent = 2;
+}
+
+message Deep1 { Deep2 next = 1; }
+message Deep2 { Deep3 next = 1; }
+message Deep3 { Deep4 next = 1; }
+message Deep4 { Deep5 next = 1; }
+message Deep5 { Deep6 next = 1; }
+message Deep6 { string leaf = 1; }
+
+message WithOneOf {
+  string name = 1;
+  oneof target {
+    string uuid = 2;
+    Scalars inline = 3;
+  }
+}
+
+message NoFields {}
+
+message Unresolved {
+  other.package.Thing thing = 1;
+}
